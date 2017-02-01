@@ -1,6 +1,8 @@
 # nextion
 
-> Communicate with ITEAD's Nextion HMI Device
+> Communicate with ITEAD's Nextion HMI Devices
+
+![pic of nextion device](https://cldup.com/clEx6-8m6M.png)
 
 ## Status
 

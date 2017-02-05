@@ -1,7 +1,7 @@
 {
   "name": "nextion",
   "version": "0.0.0",
-  "description": "",
+  "description": "Communicate with ITEAD's Nextion HMI Devices",
   "main": "dist/index.js",
   "keywords": [],
   "author": "Christopher Hiller <boneskull@boneskull.com> (https://boneskull.com/)",

@@ -8,6 +8,7 @@
 
 - [x] Support all [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
 - [ ] Send [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
+- [ ] Reasonable API
 
 ## Motivation
 
@@ -19,6 +20,24 @@ Future:
 
 - Support Raspberry Pi & Beaglebone Black
 - Interface into GUI designer commands
+
+## Usage (Untested)
+
+```js
+const connect = require('nextion');
+
+// connection API is up for debate, but the object returned is an EventEmitter.
+// you can also omit the port and we'll make a guess, or pass a `serialport`
+// property with a previously created serialport object.
+// see https://npmjs.com/package/serialport
+const nextion = await connect('/dev/ttyUSB0');
+
+nextion.listen()
+  .on('touchEvent', ({page_id, button_id, release_event}) => {
+    console.log(`button ${button_id} ${release_event ? 'released' : 'pressed'}`);
+  })
+  
+```
 
 ## License
 

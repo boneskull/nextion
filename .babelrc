@@ -1,4 +1,17 @@
 {
-  "presets": ["latest"],
+  "presets": [
+    [
+      "env",
+      {
+        "targets": {
+          "node": 4.5
+        },
+        "modules": false,
+        "loose": true,
+        "useBuiltIns": true,
+        "debug": true
+      }
+    ]
+  ],
   "sourceMaps": "inline"
 }

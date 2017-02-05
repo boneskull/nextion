@@ -1,66 +1,72 @@
 'use strict';
 
 const _ = require('lodash');
-const promisify = require('es6-promisify');
+const Promise = require('bluebird');
 
-let Serialport;
-let listPorts;
-try {
-  Serialport = require('serialport');
-  listPorts = promisify(Serialport.list);
-} catch (ignored) {
-}
+const Serialport = require('serialport');
+const listPorts = Promise.promisify(Serialport.list);
 
 const DEFAULT_BAUD_RATE = 9600;
 const PORT_GUESS_REGEX = /usb|acm|^com/i;
+let IS_TESSEL = false;
+try {
+  require('tessel');
+  IS_TESSEL = true;
+} catch (ignored) {
+}
 
 async function guessPort () {
   const port = await listPorts();
   const validPorts = ports.filter(port => PORT_GUESS_REGEX.test(port))
     .map(port => port.comName);
-  if (!validPorts.length) {
-    throw new Error("Couldn't find a good serial port!");
+  if (validPorts.length) {
+    return validPorts.shift();
   }
-  return validPorts.shift();
 }
 
-function createConnection (opts = {}) {
-  if (!(Serialport || opts.stream)) {
-    throw new Error('serialport module not available; specify readable stream via "stream" option');
+module.exports = async function createConnection (opts = {}) {
+  if (_.isString(opts)) {
+    opts = {
+      port: opts
+    };
   }
   let serialport;
-  if (opts.stream) {
-    serialport = opts.stream;
+  let port = opts.port;
+  if (opts.serialport) {
+    serialport = opts.serialport;
   }
   opts = _.defaults({
     baudRate: 9600
   }, opts);
 
-  if (!opts.port) {
-    opts.port = guessPort();
+  if (!serialport) {
+    if (!port) {
+      port = await guessPort();
+      if (!port) {
+        if (IS_TESSEL) {
+          throw new Error('Specify port "A" or "B" for Tessel 2');
+        }
+        throw new Error("Couldn't find a promising port!");
+      }
+    } else if (IS_TESSEL) {
+      if (port === 'A') {
+        port = '/dev/ttyS0';
+      } else if (port === 'B') {
+        port = '/dev/ttyS1';
+      }
+    }
+    serialport = await new Promise((resolve, reject) => {
+      new Serialport(port, {
+        baudRate: opts.baudRate,
+        parser: Serialport.parsers.byteDelimiter([0xff,0xff,0xff])
+      }, function (err) {
+        if (err) {
+          return reject(err);
+        }
+        resolve(this);
+      });
+    });
   }
-}
 
-// 'use strict';
-//
-//
-// const SerialPort = require('serialport');
-//
-// const port = new SerialPort('/dev/tty.SLAB_USBtoUART', {
-//   baudRate: 9600,
-//   parser: SerialPort.parsers.byteDelimiter([
-//     0xff,
-//     0xff,
-//     0xff
-//   ])
-// }, function (err) {
-//   if (err) {
-//     throw new Error(err);
-//   }
-//   port.on('data', data => {
-//     const result = NextionProtocol.read(Buffer.from(data.slice(0, -3)))
-//       .response().result;
-//     port.emit(result.command, result.data);
-//   })
-// });
-//
+  return new Nextion(serialport);
+}

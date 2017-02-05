@@ -27,11 +27,10 @@ class Nextion extends EventEmitter {
       try {
         result = protocol.read(Buffer.from(data))
           .response().result;
+        this.emit(result.command, result.data);
       } catch (err) {
         this.emit('error', err);
       }
-      const {command, data} = result;
-      this.emit(command, data);
     })
   }
 }

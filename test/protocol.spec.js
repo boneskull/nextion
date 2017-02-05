@@ -18,6 +18,30 @@ describe('NextionProtocol', function () {
       .an('object');
   });
 
+  it('should trim a trailing [0xff, 0xff, 0xff] from the read buffer',
+    function () {
+      expect(new NextionProtocol().read(Buffer.from([
+        102,
+        111,
+        111,
+        98,
+        97,
+        114,
+        0xff,
+        0xff,
+        0xff
+      ])).buffer)
+        .to
+        .eql(Buffer.from([
+          102,
+          111,
+          111,
+          98,
+          97,
+          114
+        ]));
+    });
+
   describe('helper', function () {
     let nextion;
 
@@ -127,7 +151,7 @@ describe('NextionProtocol', function () {
       nextion = new NextionProtocol();
     });
 
-    describe('touch', function () {
+    describe('touchEvent', function () {
       let buf;
       beforeEach(function () {
         sbx.spy(nextion.reader, 'UInt8');
@@ -140,7 +164,7 @@ describe('NextionProtocol', function () {
 
       it('should parse three (3) UInt8 values', function () {
         nextion.read(buf)
-          .touch();
+          .touchEvent();
         expect(nextion.reader.UInt8).to.have.been.calledThrice;
       });
 
@@ -148,7 +172,7 @@ describe('NextionProtocol', function () {
         'should return a result object containing number "page_id", number "button_id" and boolean "release_event"',
         function () {
           expect(nextion.read(buf)
-            .touch().result)
+            .touchEvent().result)
             .to
             .eql({
               page_id: 0,
@@ -182,6 +206,94 @@ describe('NextionProtocol', function () {
               page_id: 3,
             });
         });
+    });
+
+    describe('stringData', function () {
+      let buf;
+
+      beforeEach(function () {
+        buf = Buffer.from('foobar', 'ascii');
+      });
+
+      it('should return a result object containing value of the string',
+        function () {
+          expect(nextion.read(buf)
+            .stringData().result)
+            .to
+            .have
+            .property('value', 'foobar');
+        });
+    });
+
+    describe('numericData', function () {
+      let buf;
+
+      beforeEach(function () {
+        buf = Buffer.alloc(16);
+        buf.writeInt16LE(-132, 0);
+      });
+
+      it('should read an signed 16-bit integer', function () {
+        expect(nextion.read(buf)
+          .numericData().result)
+          .to
+          .have
+          .property('value', -132);
+      });
+    });
+
+    describe('touchCoordinate', function () {
+      let buf;
+
+      beforeEach(function () {
+        buf = Buffer.from([
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          0
+        ]);
+      });
+
+      it('should interpret four coordinates and a touch event', function () {
+        expect(nextion.read(buf)
+          .touchCoordinate().result)
+          .to
+          .eql({
+            x_high: 1,
+            x_low: 2,
+            y_high: 3,
+            y_low: 4,
+            page_id: 5,
+            button_id: 6,
+            release_event: false
+          });
+      });
+    });
+
+    describe('wake', function () {
+      let buf;
+
+      beforeEach(function () {
+        buf = Buffer.from([
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          0
+        ]);
+        sbx.stub(nextion.reader, 'touchCoordinate');
+      });
+
+      it('should delegate to touchCoordinate', function () {
+        nextion.read(buf)
+          .wake();
+        expect(nextion.reader.touchCoordinate).to.have.been.calledOnce;
+      });
     });
   });
 });

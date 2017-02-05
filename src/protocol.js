@@ -1,44 +1,99 @@
-const {createProtocol} = require('bin-protocol');
+const {Protocol, createProtocol} = require('bin-protocol');
 const {commands} = require('./commands');
-const _ = require('lodash/fp');
 
-const NextionProtocol = createProtocol();
-
-NextionProtocol.define('response', {
-  read () {
-    this.commandName('command');
-    const {command} = this.context;
-    this[command]('data');
-    return {
-      command,
-      data: this.context.data
-    };
-  }
-});
-
-NextionProtocol.define('commandName', {
-  read() {
-    this.UInt8('command_value');
-    if (!commands[this.context.command_value]) {
-      throw new Error('Unknown command');
+const NextionProtocol = createProtocol(function () {
+  const reset = this.reader.reset;
+  this.reader.reset = function (buf) {
+    if (buf.slice(buf.length - 3).equals(Buffer.from([0xff, 0xff, 0xff]))) {
+      return reset.call(this, buf.slice(0, -3));
     }
-    this.context.command = _.camelCase(commands[this.context.command_value]);
-  }
+    return reset.call(this, buf);
+  };
 });
 
-NextionProtocol.define('touch', {
-  read() {
-    this.UInt8('page_id')
-      .UInt8('button_id')
-      .UInt8('release_event');
-    this.context.release_event = Boolean(this.context.release_event);
+const definitions = {
+  byte: {
+    read (name) {
+      this.UInt8(name);
+    }
+  },
+  response: {
+    read () {
+      this.commandName('command');
+      const {command} = this.context;
+      this[command]('data');
+      return {
+        command,
+        data: this.context.data
+      };
+    }
+  },
+  commandName: {
+    read () {
+      this.byte('command_value');
+      if (!commands[this.context.command_value]) {
+        throw new Error('Unknown command');
+      }
+      this.context.command = commands[this.context.command_value];
+    }
+  },
+  touchEvent: {
+    read () {
+      this.byte('page_id')
+        .byte('button_id')
+        .byte('release_event');
+      this.context.release_event = Boolean(this.context.release_event);
+    }
+  },
+  pageId: {
+    read () {
+      this.byte('page_id');
+    }
+  },
+  touchCoordinate: {
+    read () {
+      this.byte('x_high')
+        .byte('x_low')
+        .byte('y_high')
+        .byte('y_low')
+        .touchEvent();
+    }
+  },
+  wake: {
+    read (name) {
+      this.touchCoordinate(name);
+    }
+  },
+  stringData: {
+    read () {
+      this.context.value = this.buffer.toString();
+    }
+  },
+  numericData: {
+    read () {
+      this.Int16LE('value');
+     }
+  },
+  autoSleep: {
+    read () {}
+  },
+  autoWake: {
+    read () {}
+  },
+  cardUpgrade: {
+    read () {}
+  },
+  transmitFinished: {
+    read () {}
+  },
+  transmitReady: {
+    read () {}
   }
-});
+}
 
-NextionProtocol.define('pageId', {
-  read () {
-    this.UInt8('page_id');
-  }
+Object.keys(definitions)
+  .forEach(name => {
+    NextionProtocol.define(name, definitions[name]);
 });
 
 exports.NextionProtocol = NextionProtocol;

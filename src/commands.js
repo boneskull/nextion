@@ -1,15 +1,15 @@
 'use strict';
 
 exports.commands = {
-  0x65: 'touch',
-  0x66: 'page_id',
-  0x67: 'coordinate',
+  0x65: 'touchEvent',
+  0x66: 'pageId',
+  0x67: 'touchCoordinate',
   0x68: 'wake',
-  0x70: 'string_data',
-  0x71: 'numeric_data',
-  0x87: 'sleep',
-  0x88: 'startup',
-  0x89: 'sd_upgrade',
-  0xfd: 'transmit_done',
-  0xfe: 'transmit_ready'
+  0x70: 'stringData',
+  0x71: 'numericData',
+  0x87: 'autoSleep',
+  0x88: 'autoWake',
+  0x89: 'cardUpgrade',
+  0xfd: 'transmitFinished',
+  0xfe: 'transmitReady'
 };

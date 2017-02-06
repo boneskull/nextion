@@ -1,6 +1,6 @@
 {
   "name": "nextion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Communicate with ITEAD's Nextion HMI Devices",
   "main": "dist/index.js",
   "keywords": [

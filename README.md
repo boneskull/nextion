@@ -9,6 +9,49 @@
 - [x] Support all [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
 - [ ] Send [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
 - [ ] Reasonable API
+- [x] Tessel 2 support
+
+## Usage
+
+### COM Port, USB-to-UART adapter, etc.
+
+```js
+const nextion = require('nextion');
+
+// CH340G usually shows up at this path on macOS;
+// omit "port" property for flimsy auto-detection
+nextion.createConnection({
+  port: '/dev/tty.SLAB_USBtoUART',
+  baudRate: 9600
+})
+  .then(hmi => {
+    console.log('Listening...');
+
+    hmi.on('touchEvent', data => {
+      console.log(data);
+    });
+  });
+```
+
+### Tessel 2
+
+```js
+const tessel = require('tessel');
+const nextion = require('nextion');
+
+const uart = new tessel.port.A.UART({
+  baudrate: 9600
+});
+
+nextion.createConnection({port: uart})
+  .then(hmi => {
+    console.log('Listening...');
+
+    hmi.on('touchEvent', data => {
+      console.log(data);
+    });
+  });
+```
 
 ## Motivation
 
@@ -20,24 +63,16 @@ Future:
 
 - Support Raspberry Pi & Beaglebone Black
 - Interface into GUI designer commands
+- Johnny-Five support?
 
-## Usage (Untested)
+## Notes
 
-```js
-const connect = require('nextion');
+Johnny-Five support is problematic, because:
 
-// connection API is up for debate, but the object returned is an EventEmitter.
-// you can also omit the port and we'll make a guess, or pass a `serialport`
-// property with a previously created serialport object.
-// see https://npmjs.com/package/serialport
-const nextion = await connect('/dev/ttyUSB0');
-
-nextion.listen()
-  .on('touchEvent', ({page_id, button_id, release_event}) => {
-    console.log(`button ${button_id} ${release_event ? 'released' : 'pressed'}`);
-  })
-  
-```
+- Only "enhanced" Nextion models have any GPIO pins (8 PWM-capable pins)
+- All communication w/ the device is over UART, so an IO plugin would be extremely wonky 
+- No ADC (afaik)
+- Any I2C or SPI communications would probably need to be handled by a daughter board
 
 ## License
 

@@ -2,71 +2,66 @@
 
 const _ = require('lodash');
 const Promise = require('bluebird');
-
+const {Nextion} = require('./nextion');
+const {NextionProtocol} = require('./protocol');
 const Serialport = require('serialport');
 const listPorts = Promise.promisify(Serialport.list);
 
 const DEFAULT_BAUD_RATE = 9600;
 const PORT_GUESS_REGEX = /usb|acm|^com/i;
-let IS_TESSEL = false;
-try {
-  require('tessel');
-  IS_TESSEL = true;
-} catch (ignored) {
-}
 
 async function guessPort () {
-  const port = await listPorts();
-  const validPorts = ports.filter(port => PORT_GUESS_REGEX.test(port))
-    .map(port => port.comName);
+  const ports = await listPorts();
+  const validPorts = ports.map(port => port.comName)
+    .filter(port => PORT_GUESS_REGEX.test(port));
   if (validPorts.length) {
     return validPorts.shift();
   }
 }
 
-module.exports = async function createConnection (opts = {}) {
+function openPort (opts) {
+  opts = _.defaults({
+    parser: Serialport.parsers.byteDelimiter([
+      0xff,
+      0xff,
+      0xff
+    ]),
+    baudRate: DEFAULT_BAUD_RATE
+  }, opts);
+  return new Promise((resolve, reject) => {
+    /* eslint no-new:off */
+    new Serialport(opts.port, opts, function (err) {
+      if (err) {
+        return reject(err);
+      }
+      resolve(this);
+    });
+  });
+}
+
+exports.createConnection = async function createConnection (opts = {}) {
+  let port;
+
   if (_.isString(opts)) {
     opts = {
       port: opts
     };
   }
-  let serialport;
-  let port = opts.port;
-  if (opts.serialport) {
-    serialport = opts.serialport;
-  }
-  opts = _.defaults({
-    baudRate: 9600
-  }, opts);
 
-  if (!serialport) {
-    if (!port) {
-      port = await guessPort();
-      if (!port) {
-        if (IS_TESSEL) {
-          throw new Error('Specify port "A" or "B" for Tessel 2');
-        }
-        throw new Error("Couldn't find a promising port!");
-      }
-    } else if (IS_TESSEL) {
-      if (port === 'A') {
-        port = '/dev/ttyS0';
-      } else if (port === 'B') {
-        port = '/dev/ttyS1';
-      }
+  if (_.isString(opts.port)) {
+    port = await openPort(opts);
+  } else if (_.isObject(opts.port)) {
+    port = opts.port;
+  } else {
+    opts.port = await guessPort();
+    if (!opts.port) {
+      throw new Error('No suitable ports found');
     }
-    serialport = await new Promise((resolve, reject) => {
-      new Serialport(port, {
-        baudRate: opts.baudRate,
-        parser: Serialport.parsers.byteDelimiter([0xff,0xff,0xff])
-      }, function (err) {
-        if (err) {
-          return reject(err);
-        }
-        resolve(this);
-      });
-    });
+    port = await openPort(opts);
   }
 
-  return new Nextion(serialport);
-}
+  return new Nextion(port, opts);
+};
+
+exports.Nextion = Nextion;
+exports.NextionProtocol = NextionProtocol;

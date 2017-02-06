@@ -1,3 +1,8 @@
+/* eslint-env mocha */
+/* globals expect, sinon */
+
+'use strict';
+
 const {NextionProtocol} = require('../src/protocol');
 
 describe('NextionProtocol', function () {
@@ -111,17 +116,17 @@ describe('NextionProtocol', function () {
 
       it('should call "commandName" command', function () {
         nextion.read(buf)
-          .response()
+          .response();
         expect(nextion.reader.commandName)
           .to
           .have
           .been
-          .calledWithExactly('command');
+          .calledWithExactly();
       });
 
       it('should call the "foo" command', function () {
         nextion.read(buf)
-          .response()
+          .response();
         expect(nextion.reader.foo)
           .to
           .have
@@ -187,7 +192,7 @@ describe('NextionProtocol', function () {
       beforeEach(function () {
         sbx.spy(nextion.reader, 'UInt8');
         buf = Buffer.from([
-          0x03,
+          0x03
         ]);
       });
 
@@ -203,7 +208,7 @@ describe('NextionProtocol', function () {
             .pageId().result)
             .to
             .eql({
-              page_id: 3,
+              page_id: 3
             });
         });
     });

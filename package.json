@@ -24,7 +24,8 @@
     "bin-protocol": "^3.0.3",
     "bluebird": "^3.4.7",
     "lodash": "^4.17.4",
-    "serialport": "^4.0.7"
+    "serialport": "^4.0.7",
+    "source-map-support": "^0.4.11"
   },
   "scripts": {
     "prepublish": "babel --out-dir dist src/",

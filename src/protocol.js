@@ -1,10 +1,18 @@
-const {Protocol, createProtocol} = require('bin-protocol');
+'use strict';
+
+const {createProtocol} = require('bin-protocol');
 const {commands} = require('./commands');
+const _ = require('lodash');
 
 const NextionProtocol = createProtocol(function () {
   const reset = this.reader.reset;
   this.reader.reset = function (buf) {
-    if (buf.slice(buf.length - 3).equals(Buffer.from([0xff, 0xff, 0xff]))) {
+    if (buf.slice(buf.length - 3)
+        .equals(Buffer.from([
+          0xff,
+          0xff,
+          0xff
+        ]))) {
       return reset.call(this, buf.slice(0, -3));
     }
     return reset.call(this, buf);
@@ -19,8 +27,11 @@ const definitions = {
   },
   response: {
     read () {
-      this.commandName('command');
+      this.commandName();
       const {command} = this.context;
+      if (!_.isFunction(this[command])) {
+        throw new ReferenceError(`Unknown command "${command}"`);
+      }
       this[command]('data');
       return {
         command,
@@ -72,28 +83,33 @@ const definitions = {
   numericData: {
     read () {
       this.Int16LE('value');
-     }
+    }
   },
   autoSleep: {
-    read () {}
+    read () {
+    }
   },
   autoWake: {
-    read () {}
+    read () {
+    }
   },
   cardUpgrade: {
-    read () {}
+    read () {
+    }
   },
   transmitFinished: {
-    read () {}
+    read () {
+    }
   },
   transmitReady: {
-    read () {}
+    read () {
+    }
   }
-}
+};
 
 Object.keys(definitions)
   .forEach(name => {
     NextionProtocol.define(name, definitions[name]);
-});
+  });
 
 exports.NextionProtocol = NextionProtocol;

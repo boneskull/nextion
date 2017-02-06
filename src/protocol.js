@@ -104,6 +104,10 @@ const definitions = {
   transmitReady: {
     read () {
     }
+  },
+  startup: {
+    read () {
+    }
   }
 };
 

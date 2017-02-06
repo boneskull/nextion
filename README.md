@@ -6,7 +6,8 @@
 
 ## Status
 
-- [x] Support all [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
+- [x] Support all non-success/error [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
+- [ ] Support all success/error messages
 - [ ] Send [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
 - [ ] Reasonable API
 - [x] Tessel 2 support
@@ -52,6 +53,26 @@ nextion.createConnection({port: uart})
     });
   });
 ```
+
+## Events
+
+The `Nextion` instance (`hmi`) in above examples is an `EventEmitter`.  It will emit the following events w/ any data, if present.
+
+This will be updated as events are implemented.  And I need to describe the shape of the data for some of these.
+
+- [Return Values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data) (Table 2)
+  - `touchEvent`: Touch event return data
+  - `pageId`: Current page ID
+  - `touchCoordinate`: Touch coordinate data
+  - `wake`: Touch event in sleep mode
+  - `stringData`: String variable data
+  - `numericData`: Numeric variable data
+  - `autoSleep`: Device automatically enters sleep mode
+  - `autoWake`: Device automatically wakes from sleep mode
+  - `startup`: Successful system startup
+  - `cardUpgrade`: Start SD card upgrade
+  - `transmitFinished`: Data transmit finished
+  - `transmitReady`: Ready to receive data transmission
 
 ## Motivation
 

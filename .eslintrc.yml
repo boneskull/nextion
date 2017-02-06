@@ -1,0 +1,7 @@
+extends: semistandard
+parserOptions:
+  sourceType: script
+rules:
+  strict:
+    - error
+    - safe

@@ -3,7 +3,20 @@
   "version": "0.0.0",
   "description": "Communicate with ITEAD's Nextion HMI Devices",
   "main": "dist/index.js",
-  "keywords": [],
+  "keywords": [
+    "nextion",
+    "touch",
+    "touchscreen",
+    "hmi",
+    "itead",
+    "lcd",
+    "tft",
+    "serial",
+    "uart",
+    "arduino",
+    "tessel",
+    "serialport"
+  ],
   "author": "Christopher Hiller <boneskull@boneskull.com> (https://boneskull.com/)",
   "license": "MIT",
   "dependencies": {

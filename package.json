@@ -28,8 +28,10 @@
     "source-map-support": "^0.4.11"
   },
   "scripts": {
-    "prepublish": "babel --out-dir dist src/",
-    "test": "mocha --require babel-register --require test/harness.js 'test/**/*.spec.js'"
+    "build": "babel --out-dir dist src/",
+    "prepublish": "npm run build",
+    "test": "eslint '*.js' 'test/**/*.js' 'src/**/*.js' && mocha --require babel-register --require test/harness.js 'test/**/*.spec.js'",
+    "preversion": "npm test"
   },
   "devDependencies": {
     "babel-cli": "^6.22.2",

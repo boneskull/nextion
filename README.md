@@ -92,7 +92,7 @@ Johnny-Five support is problematic, because:
 
 - Only "enhanced" Nextion models have any GPIO pins (8 PWM-capable pins)
 - All communication w/ the device is over UART, so an IO plugin would be extremely wonky 
-- No ADC (afaik)
+- No ADC, as far as I know
 - Any I2C or SPI communications would probably need to be handled by a daughter board
 
 ## License

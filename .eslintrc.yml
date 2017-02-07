@@ -1,7 +1,1 @@
-extends: semistandard
-parserOptions:
-  sourceType: script
-rules:
-  strict:
-    - error
-    - safe
+extends: ./node_modules/@boneskull/nodejs-lib-archetype/config/eslint/eslintrc.source.yml

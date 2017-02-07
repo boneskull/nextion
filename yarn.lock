@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@boneskull/nodejs-lib-archetype-dev@0.1.3":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@boneskull/nodejs-lib-archetype-dev/-/nodejs-lib-archetype-dev-0.1.3.tgz#4cfa873f3bfb19d478bafc9c9c45aba10bbcd159"
+"@boneskull/nodejs-lib-archetype-dev@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@boneskull/nodejs-lib-archetype-dev/-/nodejs-lib-archetype-dev-0.1.4.tgz#7ac3f8ee0f7376c6c74cb32cc4dcff177060d74b"
   dependencies:
     babel-cli "^6.22.2"
     babel-plugin-replace-require "^0.0.4"
@@ -23,9 +23,9 @@
     sinon "^1.17.7"
     sinon-chai "^2.8.0"
 
-"@boneskull/nodejs-lib-archetype@0.1.3":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@boneskull/nodejs-lib-archetype/-/nodejs-lib-archetype-0.1.3.tgz#182bc00b3669e57a08b30d00404a0715bc946f1f"
+"@boneskull/nodejs-lib-archetype@^0.1.4":
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/@boneskull/nodejs-lib-archetype/-/nodejs-lib-archetype-0.1.4.tgz#62c3e8a2fe369b9cf3acfe24219ee84ffd7f5bac"
   dependencies:
     babel-runtime "^6.22.0"
 
@@ -1876,13 +1876,7 @@ object.omit@^2.0.0:
     for-own "^0.1.4"
     is-extendable "^0.1.1"
 
-once@^1.3.0:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/once/-/once-1.4.0.tgz#583b1aa775961d4b113ac17d9c50baef9dd76bd1"
-  dependencies:
-    wrappy "1"
-
-once@~1.3.3:
+once@^1.3.0, once@~1.3.3:
   version "1.3.3"
   resolved "https://registry.yarnpkg.com/once/-/once-1.3.3.tgz#b2e261557ce4c314ec8304f3fa82663e4297ca20"
   dependencies:
@@ -2002,9 +1996,9 @@ rc@~1.1.6:
     minimist "^1.2.0"
     strip-json-comments "~1.0.4"
 
-"readable-stream@^2.0.0 || ^1.1.13", readable-stream@^2.0.2, readable-stream@^2.2.2:
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-2.2.2.tgz#a9e6fec3c7dda85f8bb1b3ba7028604556fc825e"
+"readable-stream@^2.0.0 || ^1.1.13", readable-stream@~2.1.4:
+  version "2.1.5"
+  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-2.1.5.tgz#66fa8b720e1438b364681f2ad1a63c618448c9d0"
   dependencies:
     buffer-shims "^1.0.0"
     core-util-is "~1.0.0"
@@ -2014,9 +2008,9 @@ rc@~1.1.6:
     string_decoder "~0.10.x"
     util-deprecate "~1.0.1"
 
-readable-stream@~2.1.4:
-  version "2.1.5"
-  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-2.1.5.tgz#66fa8b720e1438b364681f2ad1a63c618448c9d0"
+readable-stream@^2.0.2, readable-stream@^2.2.2:
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-2.2.2.tgz#a9e6fec3c7dda85f8bb1b3ba7028604556fc825e"
   dependencies:
     buffer-shims "^1.0.0"
     core-util-is "~1.0.0"

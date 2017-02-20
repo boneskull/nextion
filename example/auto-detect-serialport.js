@@ -1,13 +1,13 @@
 'use strict';
 
-const nextion = require('nextion');
+const Nextion = require('nextion');
 // const nextion = require('../dist/index');
 
-nextion.createConnection()
-  .then(hmi => {
+Nextion.create()
+  .then(nextion => {
     console.log('Listening...');
 
-    hmi.on('touchEvent', data => {
+    nextion.on('touchEvent', data => {
       console.log(data);
     });
   });

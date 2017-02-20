@@ -1,40 +1,25 @@
-'use strict';
+import {EventEmitter} from 'events';
+import {System} from './system';
 
-const {EventEmitter} = require('events');
-const {NextionProtocol} = require('./protocol');
-const _ = require('lodash');
-
-class Nextion extends EventEmitter {
-  constructor (port, opts = {}) {
+export class Nextion extends EventEmitter {
+  constructor (uart) {
     super();
-    this.port = port;
-    this.protocol = new NextionProtocol();
 
-    if (_.isFunction(port.isOpen) && !port.isOpen()) {
-      port.on('open', () => {
-        this.listen();
-      });
-    } else {
-      this.listen();
+    if (!uart) {
+      throw new TypeError('"uart" must be a UART instance');
     }
+    this.uart = uart.bind();
 
-    port.on('error', err => {
-      this.emit('error', err);
-    });
+    this.system = new System(uart);
   }
 
-  listen () {
-    this.port.on('data', data => {
-      let result;
-      try {
-        result = this.protocol.read(Buffer.from(data))
-          .response().result;
-        this.emit(result.command, result.data);
-      } catch (err) {
-        this.emit('error', err);
-      }
-    });
+  async setValue (variableName, value) {
+    return await this.uart.setValue(variableName, value);
+  }
+
+  async setComponentValue (componentName, value) {
+    return await this.setVariableValue(`${componentName}.val`, value);
   }
 }
 
-exports.Nextion = Nextion;
+Nextion.prototype.setVariableValue = Nextion.prototype.setValue;

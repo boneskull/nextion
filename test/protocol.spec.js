@@ -1,9 +1,5 @@
-/* eslint-env mocha */
-/* globals expect, sinon */
-
-'use strict';
-
-const {NextionProtocol} = require('../src/protocol');
+import {NextionProtocol} from '../src/protocol';
+import {codes, codesByName} from '../src/codes';
 
 describe('NextionProtocol', function () {
   let sbx;
@@ -16,11 +12,10 @@ describe('NextionProtocol', function () {
     sbx.restore();
   });
 
-  it('should construct an object', function () {
-    expect(new NextionProtocol())
-      .to
-      .be
-      .an('object');
+  describe('constructor', function () {
+    it('should not throw', function () {
+      expect(() => new NextionProtocol(), 'not to throw');
+    });
   });
 
   it('should trim a trailing [0xff, 0xff, 0xff] from the read buffer',
@@ -35,16 +30,14 @@ describe('NextionProtocol', function () {
         0xff,
         0xff,
         0xff
-      ])).buffer)
-        .to
-        .eql(Buffer.from([
-          102,
-          111,
-          111,
-          98,
-          97,
-          114
-        ]));
+      ])).buffer, 'to equal', Buffer.from([
+        102,
+        111,
+        111,
+        98,
+        97,
+        114
+      ]));
     });
 
   describe('helper', function () {
@@ -59,97 +52,41 @@ describe('NextionProtocol', function () {
         let buf;
 
         beforeEach(function () {
-          buf = Buffer.from([0xff]);
+          buf = Buffer.from([0xdeadbeef]);
         });
 
         it('should throw', function () {
           expect(() => {
             nextion.read(buf)
-              .commandName();
-          })
-            .to
-            .throw(Error);
+              .code();
+          }, 'to throw');
         });
       });
 
-      describe('when given a known command', function () {
+      describe('when given a known code', function () {
         let buf;
 
         beforeEach(function () {
-          // page_id
-          buf = Buffer.from([0x66]);
+          buf = Buffer.from([codesByName.pageId]);
         });
 
         it('should not throw', function () {
           expect(() => {
             nextion.read(buf)
-              .commandName();
-          })
-            .not
-            .to
-            .throw();
+              .code();
+          }, 'not to throw');
         });
 
-        it('should return a result with a camel-cased "command" property',
+        it('should return the code name',
           function () {
             expect(nextion.read(buf)
-              .commandName().result)
-              .to
-              .have
-              .property('command', 'pageId');
+              .code().result, 'to be', codes[codesByName.pageId]);
           });
       });
     });
-
-    describe('response', function () {
-      let buf;
-
-      beforeEach(function () {
-        buf = Buffer.from([0x66]);
-        sbx.stub(nextion.reader, 'commandName', function () {
-          this.context.command = 'foo';
-        });
-        nextion.reader.foo = sbx.spy(function () {
-          this.context.data = {bar: 'baz'};
-        });
-      });
-
-      it('should call "commandName" command', function () {
-        nextion.read(buf)
-          .response();
-        expect(nextion.reader.commandName)
-          .to
-          .have
-          .been
-          .calledWithExactly();
-      });
-
-      it('should call the "foo" command', function () {
-        nextion.read(buf)
-          .response();
-        expect(nextion.reader.foo)
-          .to
-          .have
-          .been
-          .calledWithExactly('data');
-      });
-
-      it('should return a result object containing command name and data',
-        function () {
-          expect(nextion.read(buf)
-            .response().result)
-            .to
-            .eql({
-              command: 'foo',
-              data: {
-                bar: 'baz'
-              }
-            });
-        });
-    });
   });
 
-  describe('command', function () {
+  describe('code', function () {
     let nextion;
 
     beforeEach(function () {
@@ -159,7 +96,7 @@ describe('NextionProtocol', function () {
     describe('touchEvent', function () {
       let buf;
       beforeEach(function () {
-        sbx.spy(nextion.reader, 'UInt8');
+        sbx.spy(nextion.reader, 'byte');
         buf = Buffer.from([
           0x00,
           0x02,
@@ -170,27 +107,24 @@ describe('NextionProtocol', function () {
       it('should parse three (3) UInt8 values', function () {
         nextion.read(buf)
           .touchEvent();
-        expect(nextion.reader.UInt8).to.have.been.calledThrice;
+        expect(nextion.reader.byte, 'was called thrice');
       });
 
       it(
         'should return a result object containing number "page_id", number "button_id" and boolean "release_event"',
         function () {
-          expect(nextion.read(buf)
-            .touchEvent().result)
-            .to
-            .eql({
-              page_id: 0,
-              button_id: 2,
-              release_event: true
-            });
+          expect(nextion.read(buf).touchEvent().result, 'to equal', {
+            pageId: 0,
+            buttonId: 2,
+            releaseEvent: true
+          });
         });
     });
 
     describe('pageId', function () {
       let buf;
       beforeEach(function () {
-        sbx.spy(nextion.reader, 'UInt8');
+        sbx.spy(nextion.reader, 'byte');
         buf = Buffer.from([
           0x03
         ]);
@@ -199,17 +133,13 @@ describe('NextionProtocol', function () {
       it('should parse one (1) UInt8 values', function () {
         nextion.read(buf)
           .pageId();
-        expect(nextion.reader.UInt8).to.have.been.calledOnce;
+        expect(nextion.reader.byte, 'was called once');
       });
 
-      it('should return a result object containing number "page_id"',
+      it('should return a result object containing number "pageId"',
         function () {
           expect(nextion.read(buf)
-            .pageId().result)
-            .to
-            .eql({
-              page_id: 3
-            });
+            .pageId().result, 'to equal', {pageId: 3});
         });
     });
 
@@ -223,10 +153,7 @@ describe('NextionProtocol', function () {
       it('should return a result object containing value of the string',
         function () {
           expect(nextion.read(buf)
-            .stringData().result)
-            .to
-            .have
-            .property('value', 'foobar');
+            .stringData().result, 'to have property', 'value', 'foobar');
         });
     });
 
@@ -240,10 +167,7 @@ describe('NextionProtocol', function () {
 
       it('should read an signed 16-bit integer', function () {
         expect(nextion.read(buf)
-          .numericData().result)
-          .to
-          .have
-          .property('value', -132);
+          .numericData().result, 'to have property', 'value', -132);
       });
     });
 
@@ -263,18 +187,15 @@ describe('NextionProtocol', function () {
       });
 
       it('should interpret four coordinates and a touch event', function () {
-        expect(nextion.read(buf)
-          .touchCoordinate().result)
-          .to
-          .eql({
-            x_high: 1,
-            x_low: 2,
-            y_high: 3,
-            y_low: 4,
-            page_id: 5,
-            button_id: 6,
-            release_event: false
-          });
+        expect(nextion.read(buf).touchCoordinate().result, 'to equal', {
+          xHigh: 1,
+          xLow: 2,
+          yHigh: 3,
+          yLow: 4,
+          pageId: 5,
+          buttonId: 6,
+          releaseEvent: false
+        });
       });
     });
 
@@ -297,7 +218,7 @@ describe('NextionProtocol', function () {
       it('should delegate to touchCoordinate', function () {
         nextion.read(buf)
           .wake();
-        expect(nextion.reader.touchCoordinate).to.have.been.calledOnce;
+        expect(nextion.reader.touchCoordinate, 'was called once');
       });
     });
   });

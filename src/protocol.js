@@ -1,119 +1,83 @@
-'use strict';
-
-const {createProtocol} = require('bin-protocol');
-const {commands} = require('./commands');
-const _ = require('lodash');
+import {createProtocol} from 'bin-protocol';
+import {codes} from './codes';
+import _ from 'lodash/fp';
 
 const NextionProtocol = createProtocol(function () {
   const reset = this.reader.reset;
   this.reader.reset = function (buf) {
     if (buf.slice(buf.length - 3)
-        .equals(Buffer.from([
-          0xff,
-          0xff,
-          0xff
-        ]))) {
+        .equals(endCommandBuffer)) {
       return reset.call(this, buf.slice(0, -3));
     }
     return reset.call(this, buf);
   };
 });
 
-const definitions = {
-  byte: {
-    read (name) {
-      this.UInt8(name);
-    }
+const readers = {
+  byte (name) {
+    this.UInt8(name);
   },
-  response: {
-    read () {
-      this.commandName();
-      const {command} = this.context;
-      if (!_.isFunction(this[command])) {
-        throw new ReferenceError(`Unknown command "${command}"`);
-      }
-      this[command]('data');
-      return {
-        command,
-        data: this.context.data
-      };
+  code () {
+    this.byte('code');
+    if (!codes[this.context.code]) {
+      throw new Error(`Unknown code: ${this.context.code}`);
     }
+    return codes[this.context.code];
   },
-  commandName: {
-    read () {
-      this.byte('command_value');
-      if (!commands[this.context.command_value]) {
-        throw new Error('Unknown command');
-      }
-      this.context.command = commands[this.context.command_value];
-    }
+  touchEvent () {
+    this.pageId()
+      .byte('buttonId')
+      .byte('releaseEvent');
+    this.context.releaseEvent = Boolean(this.context.releaseEvent);
   },
-  touchEvent: {
-    read () {
-      this.byte('page_id')
-        .byte('button_id')
-        .byte('release_event');
-      this.context.release_event = Boolean(this.context.release_event);
-    }
+  pageId () {
+    this.byte('pageId');
   },
-  pageId: {
-    read () {
-      this.byte('page_id');
-    }
+  touchCoordinate () {
+    this.byte('xHigh')
+      .byte('xLow')
+      .byte('yHigh')
+      .byte('yLow')
+      .touchEvent();
   },
-  touchCoordinate: {
-    read () {
-      this.byte('x_high')
-        .byte('x_low')
-        .byte('y_high')
-        .byte('y_low')
-        .touchEvent();
-    }
+  wake () {
+    this.touchCoordinate();
   },
-  wake: {
-    read (name) {
-      this.touchCoordinate(name);
-    }
+  stringData () {
+    this.context.value = this.buffer.toString();
   },
-  stringData: {
-    read () {
-      this.context.value = this.buffer.toString();
-    }
-  },
-  numericData: {
-    read () {
-      this.Int16LE('value');
-    }
-  },
-  autoSleep: {
-    read () {
-    }
-  },
-  autoWake: {
-    read () {
-    }
-  },
-  cardUpgrade: {
-    read () {
-    }
-  },
-  transmitFinished: {
-    read () {
-    }
-  },
-  transmitReady: {
-    read () {
-    }
-  },
-  startup: {
-    read () {
-    }
+  numericData () {
+    this.Int16LE('value');
   }
 };
 
-Object.keys(definitions)
+Object.keys(readers)
   .forEach(name => {
-    NextionProtocol.define(name, definitions[name]);
+    NextionProtocol.define(name, {
+      read: readers[name]
+    });
   });
 
-exports.NextionProtocol = NextionProtocol;
+export function read (data) {
+  if (!Buffer.isBuffer(data)) {
+    data = Buffer.from(data);
+  }
+  const codeByte = data.slice(0, 1);
+  const code = nextionProtocol.read(codeByte)
+    .code().result;
+  const result = {
+    code
+  };
+  const reader = nextionProtocol.read(data.slice(1));
+  if (_.isFunction(reader[code])) {
+    result.data = reader[code]().result;
+  }
+  return result;
+}
+
+export const nextionProtocol = new NextionProtocol();
+
+export {NextionProtocol};
+
+export const endCommand = [0xff, 0xff, 0xff];
+export const endCommandBuffer = Buffer.from(endCommand);

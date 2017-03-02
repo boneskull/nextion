@@ -1,3 +1,18 @@
 {
-  "extends": "./node_modules/@boneskull/nodejs-lib-archetype/config/babel/babelrc.json"
+  "presets": [
+    [
+      "env",
+      {
+        "targets": {
+          "node": 4
+        }
+      }
+    ],
+    "bluebird"
+  ],
+  "plugins": [
+    "transform-runtime",
+    "add-module-exports"
+  ],
+  "sourceMaps": "inline"
 }

@@ -1,1 +1,9 @@
-extends: ./node_modules/@boneskull/nodejs-lib-archetype/config/eslint/eslintrc.source.yml
+extends:
+  - semistandard
+  - plugin:lodash-fp/recommended
+plugins:
+  - lodash-fp
+rules:
+  strict:
+    - error
+    - safe

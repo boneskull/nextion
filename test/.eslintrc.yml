@@ -1,1 +1,5 @@
-extends: ../node_modules/@boneskull/nodejs-lib-archetype/config/eslint/eslintrc.test.yml
+env:
+  mocha: true
+globals:
+  sinon: true
+  expect: true

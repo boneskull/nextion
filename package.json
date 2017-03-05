@@ -29,14 +29,16 @@
     "bluebird": "^3.4.7",
     "debug": "^2.6.1",
     "lodash": "^4.17.4",
+    "rimraf": "^2.6.1",
     "serialport": "^4.0.7",
     "source-map-support": "^0.4.11"
   },
   "scripts": {
-    "build": "babel --source-maps --out-dir dist src/",
+    "build": "rimraf dist && babel --source-maps --out-dir dist src/",
     "build:watch": "babel --watch --source-maps --out-dir dist src/",
     "prepublish": "npm run build",
-    "test": "eslint '*.js' 'test/**/*.js' 'src/**/*.js' && mocha --require babel-register --require test/harness.js 'test/**/*.spec.js'",
+    "pretest": "eslint '*.js' test src",
+    "test": "nyc mocha --require babel-register --require source-map-support --require test/harness.js 'test/**/*.spec.js'",
     "preversion": "npm test"
   },
   "devDependencies": {
@@ -53,6 +55,7 @@
     "eslint-plugin-promise": "^3.4.0",
     "eslint-plugin-standard": "^2.0.1",
     "mocha": "^3.2.0",
+    "nyc": "^10.1.2",
     "sinon": "^1.17.7",
     "unexpected": "^10.25.0",
     "unexpected-eventemitter": "^0.1.0",

@@ -155,6 +155,7 @@ export class UART extends EventEmitter {
     port = port || this.port;
 
     port.on('data', data => {
+      rxDebug(`'Data: ${data.toString()}`);
       try {
         const result = read(data);
         this.emit('event', result.code, result.data);

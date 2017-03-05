@@ -618,7 +618,7 @@ babel-register@^6.22.0, babel-register@^6.23.0:
     mkdirp "^0.5.1"
     source-map-support "^0.4.2"
 
-babel-runtime@^6.18.0, babel-runtime@^6.22.0:
+babel-runtime@^6.18.0, babel-runtime@^6.22.0, babel-runtime@^6.23.0:
   version "6.23.0"
   resolved "https://registry.yarnpkg.com/babel-runtime/-/babel-runtime-6.23.0.tgz#0a9489f144de70efb3ce4300accdb329e2fc543b"
   dependencies:
@@ -2439,6 +2439,13 @@ uid-number@~0.0.6:
 unexpected-bluebird@2.9.34-longstack2:
   version "2.9.34-longstack2"
   resolved "https://registry.yarnpkg.com/unexpected-bluebird/-/unexpected-bluebird-2.9.34-longstack2.tgz#49acac753b0556ded6025210ee96182307d2b2c9"
+
+unexpected-eventemitter@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/unexpected-eventemitter/-/unexpected-eventemitter-0.1.0.tgz#488beaaab0cf4f6dcacde324a8e9015cd8a0e288"
+  dependencies:
+    babel-runtime "^6.23.0"
+    source-map-support "^0.4.11"
 
 unexpected-sinon@^10.7.0:
   version "10.7.0"

@@ -8,7 +8,10 @@ export class Nextion extends EventEmitter {
     if (!uart) {
       throw new TypeError('"uart" must be a UART instance');
     }
-    this.uart = uart.bind();
+    this.uart = uart.bind()
+      .on('event', (...args) => {
+        this.emit('event', ...args);
+      });
 
     this.system = new System(uart);
   }

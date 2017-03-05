@@ -161,6 +161,7 @@ export class UART extends EventEmitter {
       }
       try {
         const result = read(data);
+        this.emit('event', result.code, result.data);
         this.emit(result.code, result.data);
       } catch (err) {
         this.emit('error', err);

@@ -92,5 +92,33 @@ describe('UART', function () {
         });
       });
     });
+
+    describe('bind()', function () {
+      beforeEach(function () {
+        sbx.spy(port, 'on');
+      });
+
+      it(`should listen for port's "data" event`, function () {
+        uart.bind();
+        expect(port.on, 'was called with', 'data');
+      });
+
+      it(`should listen for port's "error" event`, function () {
+        uart.bind();
+        expect(port.on, 'was called with', 'error');
+      });
+
+      describe('when port emits "error"', function () {
+        beforeEach(function () {
+          uart.bind();
+        });
+
+        it('should cause UART to emit "error"', function () {
+          const err = new Error();
+          expect(() => port.emit('error', err), 'to emit from', uart,
+            'error', err);
+        });
+      });
+    });
   });
 });

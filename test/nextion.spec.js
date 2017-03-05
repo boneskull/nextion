@@ -1,5 +1,6 @@
 /* eslint-disable no-new */
 import {Nextion} from '../src/nextion';
+import {EventEmitter} from 'events';
 
 describe('Nextion', function () {
   let sbx;
@@ -7,10 +8,9 @@ describe('Nextion', function () {
 
   beforeEach(function () {
     sbx = sinon.sandbox.create();
-    uart = {
-      bind: sbx.spy(),
-      unbind: sbx.spy()
-    };
+    uart = new EventEmitter();
+    uart.bind = sbx.stub().returns(uart);
+    uart.unbind = sbx.stub().returns(uart);
   });
 
   afterEach(function () {

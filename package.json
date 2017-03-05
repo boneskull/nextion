@@ -29,8 +29,8 @@
     "source-map-support": "^0.4.11"
   },
   "scripts": {
-    "build": "babel --out-dir dist src/",
-    "build:watch": "babel --watch --out-dir dist src/",
+    "build": "babel --source-maps --out-dir dist src/",
+    "build:watch": "babel --watch --source-maps --out-dir dist src/",
     "prepublish": "npm run build",
     "test": "eslint '*.js' 'test/**/*.js' 'src/**/*.js' && mocha --require babel-register --require test/harness.js 'test/**/*.spec.js'",
     "preversion": "npm test"
@@ -51,6 +51,7 @@
     "mocha": "^3.2.0",
     "sinon": "^1.17.7",
     "unexpected": "^10.25.0",
+    "unexpected-eventemitter": "^0.1.0",
     "unexpected-sinon": "^10.7.0"
   },
   "engines": {

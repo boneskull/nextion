@@ -155,10 +155,6 @@ export class UART extends EventEmitter {
     port = port || this.port;
 
     port.on('data', data => {
-      if (!Array.isArray(data)) {
-        this.emit('error', new Error('Invalid data; expected array of bytes'));
-        return;
-      }
       try {
         const result = read(data);
         this.emit('event', result.code, result.data);

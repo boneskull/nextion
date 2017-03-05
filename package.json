@@ -17,6 +17,10 @@
     "tessel",
     "serialport"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/boneskull/nextion.git"
+  },
   "author": "Christopher Hiller <boneskull@boneskull.com> (https://boneskull.com/)",
   "license": "MIT",
   "dependencies": {

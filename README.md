@@ -114,7 +114,7 @@ If the [serialport](https://www.npmjs.com/package/serialport) module supports th
 
 ### MIPS
 
-This shouldn't be too bad, because the Tessel 2 is MIPS-bsaed, *but* we require Node.js v4.  Other MIPS-based boards I've used have had trouble getting it compiled, packaged, or running at a respectable speed.
+This shouldn't be too bad, because the Tessel 2 is MIPS-based, *but* we require Node.js v4.  Other MIPS-based boards I've used have had trouble getting it compiled, packaged, or running at a respectable speed.
 
 ## License
 

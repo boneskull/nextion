@@ -14,8 +14,9 @@ export const codes = {
   0x68: 'wake',
   0x70: 'stringData',
   0x71: 'numericData',
-  0x87: 'autoSleep',
-  0x88: 'autoWake',
+  0x86: 'autoSleep',
+  0x87: 'autoWake',
+  0x88: 'startup',
   0x89: 'cardUpgrade',
   0xfd: 'transmitFinished',
   0xfe: 'transmitReady'

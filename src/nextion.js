@@ -1,5 +1,8 @@
 import {EventEmitter} from 'events';
 import {System} from './system';
+import debug from 'debug';
+
+const nDebug = debug('nextion:Nextion');
 
 export class Nextion extends EventEmitter {
   constructor (uart) {
@@ -14,6 +17,8 @@ export class Nextion extends EventEmitter {
       });
 
     this.system = new System(uart);
+
+    nDebug('Nextion ready');
   }
 
   async setValue (variableName, value) {

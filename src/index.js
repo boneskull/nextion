@@ -1,4 +1,3 @@
-import 'source-map-support/register';
 import {Nextion} from './nextion';
 import {NextionProtocol} from './protocol';
 import {UART} from './uart';

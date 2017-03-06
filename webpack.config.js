@@ -9,7 +9,8 @@ module.exports = {
   entry: require.resolve('./src/index.js'),
   target: 'node',
   output: {
-    filename: 'minimal.js',
+    path: 'minimal',
+    filename: 'index.js',
     libraryTarget: 'commonjs2',
     library: pkg.name
   },

@@ -20,4 +20,4 @@ jspm_packages
 *.tgz
 .yarn-integrity
 dist/
-minimal.js
+minimal/

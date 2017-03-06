@@ -2,7 +2,7 @@
   "name": "nextion",
   "version": "0.3.0",
   "description": "Communicate with ITEAD's Nextion HMI Devices",
-  "main": "dist/index.js",
+  "main": "index.js",
   "keywords": [
     "nextion",
     "touch",
@@ -34,8 +34,9 @@
     "source-map-support": "^0.4.11"
   },
   "scripts": {
-    "build": "rimraf dist && babel --source-maps --out-dir dist src/",
-    "build:watch": "babel --watch --source-maps --out-dir dist src/",
+    "prebuild": "rimraf dist",
+    "build": "concurrently \"babel --source-maps --out-dir dist src\" \"cross-env BABEL_ENV=production webpack -p\"",
+    "build:watch": "concurrently \"babel --watch --source-maps --out-dir dist src\" \"cross-env BABEL_ENV=production webpack --watch -p\"",
     "prepublish": "npm run build",
     "pretest": "eslint '*.js' test src",
     "test": "nyc mocha --require babel-register --require source-map-support --require test/harness.js 'test/**/*.spec.js'",
@@ -43,11 +44,17 @@
   },
   "devDependencies": {
     "babel-cli": "^6.22.2",
+    "babel-core": "^6.23.1",
+    "babel-loader": "^6.3.2",
     "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-lodash": "^3.2.11",
     "babel-plugin-transform-runtime": "^6.22.0",
     "babel-preset-bluebird": "^1.0.1",
-    "babel-preset-env": "^1.1.8",
+    "babel-preset-env": "^1.2.0",
+    "babel-preset-latest": "^6.22.0",
     "babel-register": "^6.22.0",
+    "concurrently": "^3.4.0",
+    "cross-env": "^3.2.3",
     "eslint": "^3.15.0",
     "eslint-config-semistandard": "^7.0.0",
     "eslint-config-standard": "^6.2.1",
@@ -59,7 +66,9 @@
     "sinon": "^1.17.7",
     "unexpected": "^10.25.0",
     "unexpected-eventemitter": "^0.1.0",
-    "unexpected-sinon": "^10.7.0"
+    "unexpected-sinon": "^10.7.0",
+    "webpack": "^2.2.1",
+    "webpack-node-externals": "^1.5.4"
   },
   "engines": {
     "node": ">=4"
@@ -67,6 +76,7 @@
   "files": [
     "dist",
     "examples",
-    "src"
+    "src",
+    "minimal.js"
   ]
 }

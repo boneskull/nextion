@@ -1,3 +1,4 @@
+import 'source-map-support/register';
 import {Nextion} from './nextion';
 import {NextionProtocol} from './protocol';
 import {UART} from './uart';
@@ -20,4 +21,4 @@ Nextion.fromPort = async function fromPort (portName, opts = {}) {
 Nextion.NextionProtocol = NextionProtocol;
 Nextion.UART = UART;
 
-export default Nextion;
+module.exports = Nextion;

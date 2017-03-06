@@ -10,9 +10,25 @@
     ],
     "bluebird"
   ],
+  "env": {
+    "production": {
+      "presets": [
+        [
+          "latest",
+          {
+            "modules": false
+          }
+        ],
+        "bluebird"
+      ],
+      "plugins": [
+        "transform-runtime",
+        "lodash"
+      ]
+    }
+  },
   "plugins": [
     "transform-runtime",
     "add-module-exports"
-  ],
-  "sourceMaps": "inline"
+  ]
 }

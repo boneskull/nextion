@@ -9,7 +9,8 @@
 - [x] Support all non-success/error [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
 - [ ] Support all success/error messages
 - [ ] Send [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
-- [ ] Reasonable, high-level API; don't require user to send raw commands
+- [x] Reasonable, high-level API; don't require user to send raw commands
+  - [ ] Complete this API
 - [x] Tessel 2 support
 
 ## Basic Usage
@@ -45,7 +46,7 @@ Nextion.create()
 
 ```js
 const tessel = require('tessel');
-const Nextion = require('nextion');
+const Nextion = require('nextion/minimal');
 
 const uart = new tessel.port.A.UART({
   baudrate: 9600
@@ -56,6 +57,10 @@ Nextion.fromSerial(uart)
     // Yipper McCheese!
   });
 ```
+
+The `nextion/minimal` module is for resource-constrained systems; it's compressed and does not include source maps.
+
+### Notes
 
 As long as the argument passed into `Nextion.fromSerial` is a [Duplex stream](https://nodejs.org/api/stream.html#stream_class_stream_duplex) or a duck-typed one (a la [serialport](https://www.npmjs.com/package/serialport)), you should be able to use it.  Hack away!
 

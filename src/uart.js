@@ -2,8 +2,8 @@ import {EventEmitter} from 'events';
 import Serialport from 'serialport';
 import _ from 'lodash/fp';
 import {endCommand, endCommandBuffer, read} from './protocol';
-import Promise from 'bluebird';
 import debug from 'debug';
+import pMapSeries from 'p-map-series';
 
 export const DEFAULT_BAUD_RATE = 9600;
 export const DEFAULT_PARSER = Serialport.parsers.byteDelimiter(endCommand);
@@ -86,7 +86,7 @@ export class UART extends EventEmitter {
    * @param {*} value - Likely a primitive.
    * @returns {Promise<*>}
    */
-  async setValue (variableName, value) {
+  setValue (variableName, value) {
     return this.request(`${variableName}=${value}`);
   }
 
@@ -120,15 +120,14 @@ export class UART extends EventEmitter {
    * @param {Array<string>|string} commands - Command(s) to execute
    * @returns {Promise<*>} Result or array of results
    */
-  async request (commands = []) {
+  request (commands = []) {
     try {
       this.assertPortOpen();
     } catch (err) {
       this.emit('error', err);
-      return;
     }
     commands = [].concat(commands);
-    const results = await Promise.map(commands, command => {
+    return pMapSeries(commands, command => {
       this.send(command);
       return new Promise(resolve => {
         this.port.once('data', data => {
@@ -137,8 +136,8 @@ export class UART extends EventEmitter {
           resolve(result);
         });
       });
-    }, {concurrency: 1});
-    return commands.length === 1 ? results.shift() : results;
+    }, {concurrency: 1})
+      .then(results => commands.length === 1 ? results.shift() : results);
   }
 
   /**
@@ -155,7 +154,7 @@ export class UART extends EventEmitter {
     port = port || this.port;
 
     port.on('data', data => {
-      rxDebug(`'Data: ${data.toString()}`);
+      rxDebug('Data:', data);
       try {
         const result = read(data);
         this.emit('event', result.code, result.data);
@@ -224,8 +223,8 @@ export class UART extends EventEmitter {
    * @param {UARTOptions} [opts={}] - Options
    * @returns {Promise.<UART>}
    */
-  static async fromSerial (serialPort, opts = {}) {
-    return new UART(serialPort, opts);
+  static fromSerial (serialPort, opts = {}) {
+    return Promise.resolve(new UART(serialPort, opts));
   }
 
   /**
@@ -238,7 +237,7 @@ export class UART extends EventEmitter {
    * @param {UARTOptions} [opts={}] - Options
    * @returns {Promise.<UART>}
    */
-  static async fromPort (portName, opts = {}) {
+  static fromPort (portName, opts = {}) {
     if (_.isObject(portName)) {
       opts = portName;
       portName = portName.port;
@@ -250,18 +249,24 @@ export class UART extends EventEmitter {
     });
 
     if (!portName) {
-      portName = await UART.findPort();
-      if (!portName) {
-        throw new Error('Could not find a serial device!');
-      }
+      return UART.findPort()
+        .then(portName => {
+          if (!portName) {
+            throw new Error('Could not find a serial device!');
+          }
+          return portName;
+        });
+    } else {
+      return new Promise((resolve, reject) => {
+        const serialPort = new Serialport(portName, opts, err => {
+          if (err) {
+            return reject(err);
+          }
+          resolve(serialPort);
+        });
+      })
+        .then(serialPort => UART.fromSerial(serialPort, opts));
     }
-
-    const serialPort = await Promise.fromNode(done => {
-      // eslint-disable-next-line no-new
-      new Serialport(portName, opts, done);
-    });
-
-    return UART.fromSerial(serialPort, opts);
   }
 
   /**
@@ -270,7 +275,7 @@ export class UART extends EventEmitter {
    * @param {UARTOptions} [opts] - Options
    * @returns {Promise.<UART>}
    */
-  static async from (port, opts = {}) {
+  static from (port, opts = {}) {
     return _.isObject(port) && _.isFunction(port.on) ? UART.fromSerial(port,
       opts) : UART.fromPort(port, opts);
   }
@@ -279,9 +284,16 @@ export class UART extends EventEmitter {
    * Tries to find a device on a serial/COM port.
    * @returns {Promise<string|void>} Name/path of promising serial port, if any
    */
-  static async findPort () {
-    const allPorts = await Promise.fromNode(Serialport.list);
-    return _.pipe(_.pluck('comName'),
-      _.filter(portName => PORT_GUESS_REGEX.test(portName)), _.head)(allPorts);
+  static findPort () {
+    return new Promise((resolve, reject) => {
+      Serialport.list((err, data) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(data);
+      });
+    })
+      .then(_.pipe(_.pluck('comName'),
+        _.filter(portName => PORT_GUESS_REGEX.test(portName)), _.head));
   }
 }

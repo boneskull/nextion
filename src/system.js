@@ -20,43 +20,54 @@ export class System extends EventEmitter {
     this.uart = uart;
   }
 
-  async setGlobalVariable (name, value) {
-    if (!_.includes(SYSTEM_GLOBAL_VARIABLES, name)) {
-      throw new Error(
-        `"name" must be one of: ${SYSTEM_GLOBAL_VARIABLES.join(', ')}`);
-    }
-    if (!isUnsignedInteger(value)) {
-      throw new Error('"value" must be an unsigned integer <= 4294967295');
-    }
-    return await this.uart.setValue(name, value);
+  setGlobalVariable (name, value) {
+    return Promise.resolve()
+      .then(() => {
+        if (!_.includes(SYSTEM_GLOBAL_VARIABLES, name)) {
+          throw new Error(
+            `"name" must be one of: ${SYSTEM_GLOBAL_VARIABLES.join(', ')}`);
+        }
+        if (!isUnsignedInteger(value)) {
+          throw new Error('"value" must be an unsigned integer <= 4294967295');
+        }
+        return this.uart.setValue(name, value);
+      });
   }
 
-  async setRandomRange (min, max) {
-    if (!isUnsignedInteger(min)) {
-      throw new Error('"min" must be an unsigned integer <= 4294967295');
-    }
-    if (!isUnsignedInteger(max)) {
-      throw new Error('"max" must be an unsigned integer <= 4294967295');
-    }
+  setRandomRange (min, max) {
+    return Promise.resolve()
+      .then(() => {
+        if (!isUnsignedInteger(min)) {
+          throw new Error('"min" must be an unsigned integer <= 4294967295');
+        }
+        if (!isUnsignedInteger(max)) {
+          throw new Error('"max" must be an unsigned integer <= 4294967295');
+        }
 
-    return await this.uart.request(`ranset ${min},${max}`);
+        return this.uart.request(`ranset ${min},${max}`);
+      });
   }
 
-  async random (min = 0, max = 0) {
-    if (max < min) {
-      throw new Error('"max" cannot be less than "min"');
-    }
-    if (min > 0 || max > 0) {
-      await this.setRandomRange(min, max);
-    }
-    return await this.uart.request('rand');
+  random (min = 0, max = 0) {
+    return Promise.resolve(() => {
+      if (max < min) {
+        throw new Error('"max" cannot be less than "min"');
+      }
+      if (min < 0 || max < 0) {
+        throw new Error('only positive integers allowed');
+      }
+      if (min > 0 || max > 0) {
+        return this.setRandomRange(min, max);
+      }
+    })
+      .then(() => this.uart.request('rand'));
   }
 
-  async sleep () {
-    return await this.uart.request('sleep=1');
+  sleep () {
+    return this.uart.request('sleep=1');
   }
 
-  async wake () {
-    return await this.uart.request('sleep=0');
+  wake () {
+    return this.uart.request('sleep=0');
   }
 }

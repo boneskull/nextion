@@ -1,12 +1,10 @@
-/* eslint-disable strict */
+import nodeExternals from 'webpack-node-externals';
+import pkg from './package.json';
+import BabiliPlugin from 'babili-webpack-plugin';
+import {join} from 'path';
 
-'use strict';
-
-const nodeExternals = require('webpack-node-externals');
-const pkg = require('./package.json');
-
-module.exports = {
-  entry: require.resolve('./src/index.js'),
+export default {
+  entry: join(__dirname, 'src', 'index.js'),
   target: 'node',
   output: {
     path: 'minimal',
@@ -29,5 +27,8 @@ module.exports = {
         loader: 'babel-loader'
       }
     ]
-  }
+  },
+  plugins: [
+    new BabiliPlugin()
+  ]
 };

@@ -5,30 +5,31 @@
       {
         "targets": {
           "node": 4
-        }
+        },
+        "loose": true
       }
-    ],
-    "bluebird"
+    ]
   ],
   "env": {
     "production": {
       "presets": [
         [
-          "latest",
+          "env",
           {
-            "modules": false
+            "targets": {
+              "node": 4
+            },
+            "modules": false,
+            "loose": true
           }
-        ],
-        "bluebird"
+        ]
       ],
       "plugins": [
-        "transform-runtime",
         "lodash"
       ]
     }
   },
   "plugins": [
-    "transform-runtime",
     "add-module-exports"
   ]
 }

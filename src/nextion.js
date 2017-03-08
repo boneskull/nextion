@@ -21,12 +21,12 @@ export class Nextion extends EventEmitter {
     nDebug('Nextion ready');
   }
 
-  async setValue (variableName, value) {
-    return await this.uart.setValue(variableName, value);
+  setValue (variableName, value) {
+    return this.uart.setValue(variableName, value);
   }
 
-  async setComponentValue (componentName, value) {
-    return await this.setVariableValue(`${componentName}.val`, value);
+  setComponentValue (componentName, value) {
+    return this.setVariableValue(`${componentName}.val`, value);
   }
 }
 

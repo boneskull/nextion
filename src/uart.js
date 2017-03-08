@@ -1,15 +1,18 @@
 import {EventEmitter} from 'events';
 import Serialport from 'serialport';
 import _ from 'lodash/fp';
-import {endCommand, endCommandBuffer, read} from './protocol';
+import {delimiter, delimiterBuffer, readEvent, readExecValue} from './protocol';
 import debug from 'debug';
 import pMapSeries from 'p-map-series';
 
 export const DEFAULT_BAUD_RATE = 9600;
-export const DEFAULT_PARSER = Serialport.parsers.byteDelimiter(endCommand);
 
 const PORT_GUESS_REGEX = /usb|acm|^com/i;
-
+/**
+ * Timeout in ms we should wait for response from Nextion for various requests
+ * @type {number}
+ */
+const REQUEST_TIMEOUT = 5000;
 const txDebug = debug('nextion:uart:tx');
 const rxDebug = debug('nextion:uart:rx');
 
@@ -59,6 +62,18 @@ export class UART extends EventEmitter {
     this.opts = _.defaults({
       returnCommandResult: 'always'
     }, opts);
+
+    this.on('data', data => {
+      try {
+        const result = readEvent(data);
+        if (result) {
+          rxDebug(`Event "${result.code}"`, result.data);
+          this.emit('event', result.code, result.data);
+        }
+      } catch (err) {
+        this.emit('error', err);
+      }
+    });
   }
 
   get returnCommandResult () {
@@ -81,12 +96,18 @@ export class UART extends EventEmitter {
 
   /**
    * Set variable `variableName` to value `value`.
+   * Corrects booleans to 0/1.
    * @param {string} variableName - Name of variable, component, system var,
    *   page, etc.
    * @param {*} value - Likely a primitive.
    * @returns {Promise<*>}
    */
   setValue (variableName, value) {
+    if (value === true) {
+      value = 1;
+    } else if (value === false) {
+      value = 0;
+    }
     return this.request(`${variableName}=${value}`);
   }
 
@@ -101,9 +122,9 @@ export class UART extends EventEmitter {
   send (command) {
     try {
       this.assertPortOpen();
-      this.port.write(command);
-      this.port.write(endCommandBuffer);
+      this.port.write(`${command}\n`);
       txDebug(`Sent: ${command}`);
+      this.port.write(delimiterBuffer);
     } catch (err) {
       /**
        * Emitted if {@link UART#assertPortOpen} throws.
@@ -128,13 +149,22 @@ export class UART extends EventEmitter {
     }
     commands = [].concat(commands);
     return pMapSeries(commands, command => {
-      this.send(command);
-      return new Promise(resolve => {
-        this.port.once('data', data => {
-          const result = read(data);
-          rxDebug(`Received: %j`, result);
-          resolve(result);
+      txDebug('Beginning request');
+      return new Promise((resolve, reject) => {
+        const handler = data => {
+          const result = readExecValue(data);
+          if (result) {
+            rxDebug(`Received: %j`, result);
+            clearTimeout(t);
+            return resolve(result);
+          }
+          this.once('data', handler);
+        };
+        this.once('data', handler);
+        const t = setTimeout(() => {
+          reject(new Error(`Timeout of ${REQUEST_TIMEOUT}ms exceeded`));
         });
+        this.send(command);
       });
     }, {concurrency: 1})
       .then(results => commands.length === 1 ? results.shift() : results);
@@ -155,18 +185,30 @@ export class UART extends EventEmitter {
 
     port.on('data', data => {
       rxDebug('Data:', data);
-      try {
-        const result = read(data);
-        this.emit('event', result.code, result.data);
-        this.emit(result.code, result.data);
-      } catch (err) {
-        this.emit('error', err);
-      }
+      let nextDelimiterIndex = 0;
+      let buf = [];
+      // this is torn from serialport's byte delimiter parser, considering
+      // we aren't ensured a Serialport object.
+      Array.from(data)
+        .forEach(byte => {
+          buf.push(byte);
+          if (_.last(buf) === delimiter[nextDelimiterIndex]) {
+            nextDelimiterIndex++;
+          }
+          if (nextDelimiterIndex === delimiter.length) {
+            this.emit('data', buf);
+            buf = [];
+            nextDelimiterIndex = 0;
+          }
+        });
     });
 
     port.on('error', err => {
       this.emit('error', err);
     });
+
+    this.send();
+    this.setReturnCommandResult(this.returnCommandResult);
 
     return this;
   }
@@ -244,7 +286,6 @@ export class UART extends EventEmitter {
     }
 
     opts = _.defaults({
-      parser: DEFAULT_PARSER,
       baudRate: DEFAULT_BAUD_RATE
     });
 

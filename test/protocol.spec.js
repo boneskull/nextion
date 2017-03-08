@@ -1,5 +1,4 @@
 import {NextionProtocol} from '../src/protocol';
-import {codes, codesByName} from '../src/codes';
 
 describe('NextionProtocol', function () {
   let sbx;
@@ -62,27 +61,6 @@ describe('NextionProtocol', function () {
           }, 'to throw');
         });
       });
-
-      describe('when given a known code', function () {
-        let buf;
-
-        beforeEach(function () {
-          buf = Buffer.from([codesByName.pageId]);
-        });
-
-        it('should not throw', function () {
-          expect(() => {
-            nextion.read(buf)
-              .code();
-          }, 'not to throw');
-        });
-
-        it('should return the code name',
-          function () {
-            expect(nextion.read(buf)
-              .code().result, 'to be', codes[codesByName.pageId]);
-          });
-      });
     });
   });
 
@@ -111,7 +89,7 @@ describe('NextionProtocol', function () {
       });
 
       it(
-        'should return a result object containing number "page_id", number "button_id" and boolean "release_event"',
+        'should return a result object containing number "pageId", number "buttonId" and boolean "releaseEvent"',
         function () {
           expect(nextion.read(buf).touchEvent().result, 'to equal', {
             pageId: 0,

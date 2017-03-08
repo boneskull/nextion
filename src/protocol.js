@@ -1,12 +1,14 @@
 import {createProtocol} from 'bin-protocol';
-import {codes} from './codes';
+import {eventCodeMap, executionCodeMap} from './codes';
 import _ from 'lodash/fp';
 
 const NextionProtocol = createProtocol(function () {
+  // this is mostly here for the convenience of a 3p consumer.
+  // TODO: document
   const reset = this.reader.reset;
   this.reader.reset = function (buf) {
     if (buf.slice(buf.length - 3)
-        .equals(endCommandBuffer)) {
+        .equals(delimiterBuffer)) {
       return reset.call(this, buf.slice(0, -3));
     }
     return reset.call(this, buf);
@@ -19,10 +21,11 @@ const readers = {
   },
   code () {
     this.byte('code');
-    if (!codes[this.context.code]) {
+    const code = eventCodeMap.get(String(this.context.code));
+    if (!code) {
       throw new Error(`Unknown code: ${this.context.code}`);
     }
-    return codes[this.context.code];
+    return code;
   },
   touchEvent () {
     this.pageId()
@@ -59,7 +62,7 @@ Object.keys(readers)
     });
   });
 
-export function read (data) {
+export function readEvent (data) {
   if (!Buffer.isBuffer(data)) {
     data = Buffer.from(data);
   }
@@ -76,9 +79,20 @@ export function read (data) {
   return result;
 }
 
+export function readExecValue (data) {
+  if (!Buffer.isBuffer(data)) {
+    data = Buffer.from(data);
+  }
+  const code = executionCodeMap.has(String(data.slice(0, 1)));
+  if (!code) {
+    return {code: 'unknownResult', data: data};
+  }
+  return {code};
+}
+
 export const nextionProtocol = new NextionProtocol();
 
 export {NextionProtocol};
 
-export const endCommand = [0xff, 0xff, 0xff];
-export const endCommandBuffer = Buffer.from(endCommand);
+export const delimiter = [0xff, 0xff, 0xff];
+export const delimiterBuffer = Buffer.from(delimiter);

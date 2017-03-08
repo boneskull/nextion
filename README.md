@@ -9,9 +9,11 @@
 - [x] Support all non-success/error [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
 - [ ] Support all success/error messages
 - [ ] Send [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
-- [x] Reasonable, high-level API; don't require user to send raw commands
-  - [ ] Complete this API
+- [ ] Reasonable, high-level API; don't require user to send raw commands
+  - [ ] System-level abstraction
+  - [ ] Component-level abstraction
 - [x] Tessel 2 support
+- [ ] Remove `serialport` dependency
 
 ## Basic Usage
 

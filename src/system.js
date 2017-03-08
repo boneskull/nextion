@@ -7,7 +7,7 @@ const isUnsignedInteger = _.overEvery([
   _.gte(0)
 ]);
 
-export const SYSTEM_GLOBAL_VARIABLES = [
+export const SYSTEM_VARIABLES = [
   'sys0',
   'sys1',
   'sys2'
@@ -20,12 +20,12 @@ export class System extends EventEmitter {
     this.uart = uart;
   }
 
-  setGlobalVariable (name, value) {
+  setSystemVariable (name, value) {
     return Promise.resolve()
       .then(() => {
-        if (!_.includes(SYSTEM_GLOBAL_VARIABLES, name)) {
+        if (!_.includes(SYSTEM_VARIABLES, name)) {
           throw new Error(
-            `"name" must be one of: ${SYSTEM_GLOBAL_VARIABLES.join(', ')}`);
+            `"name" must be one of: ${SYSTEM_VARIABLES.join(', ')}`);
         }
         if (!isUnsignedInteger(value)) {
           throw new Error('"value" must be an unsigned integer <= 4294967295');
@@ -64,10 +64,10 @@ export class System extends EventEmitter {
   }
 
   sleep () {
-    return this.uart.request('sleep=1');
+    return this.uart.setValue('sleep', true);
   }
 
   wake () {
-    return this.uart.request('sleep=0');
+    return this.uart.setValue('sleep', false);
   }
 }

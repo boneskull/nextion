@@ -180,8 +180,6 @@ describe('NextionProtocol', function () {
           2,
           3,
           4,
-          5,
-          6,
           0
         ]);
       });
@@ -192,14 +190,12 @@ describe('NextionProtocol', function () {
           xLow: 2,
           yHigh: 3,
           yLow: 4,
-          pageId: 5,
-          buttonId: 6,
           releaseEvent: false
         });
       });
     });
 
-    describe('wake', function () {
+    describe('touchCoordinateOnWake', function () {
       let buf;
 
       beforeEach(function () {
@@ -217,7 +213,7 @@ describe('NextionProtocol', function () {
 
       it('should delegate to touchCoordinate', function () {
         nextion.read(buf)
-          .wake();
+          .touchCoordinateOnWake();
         expect(nextion.reader.touchCoordinate, 'was called once');
       });
     });

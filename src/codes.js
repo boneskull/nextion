@@ -11,7 +11,7 @@ export const codes = {
   0x65: 'touchEvent',
   0x66: 'pageId',
   0x67: 'touchCoordinate',
-  0x68: 'wake',
+  0x68: 'touchCoordinateOnWake',
   0x70: 'stringData',
   0x71: 'numericData',
   0x86: 'autoSleep',

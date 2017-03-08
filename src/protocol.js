@@ -38,9 +38,10 @@ const readers = {
       .byte('xLow')
       .byte('yHigh')
       .byte('yLow')
-      .touchEvent();
+      .byte('releaseEvent');
+    this.context.releaseEvent = Boolean(this.context.releaseEvent);
   },
-  wake () {
+  touchCoordinateOnWake () {
     this.touchCoordinate();
   },
   stringData () {

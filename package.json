@@ -38,7 +38,8 @@
     "build:watch": "concurrently \"babel --watch --source-maps --out-dir dist src\" \"cross-env BABEL_ENV=production webpack --watch\"",
     "prepublish": "npm run build",
     "pretest": "eslint '*.js' test src",
-    "test": "nyc mocha --require babel-register --require source-map-support --require test/harness.js 'test/**/*.spec.js'",
+    "test": "nyc --require babel-register mocha --require test/harness.js 'test/unit/*.spec.js'",
+    "test:e2e": "mocha --require babel-register --require test/harness.js 'test/e2e/**/*.spec.js'",
     "preversion": "npm test"
   },
   "devDependencies": {

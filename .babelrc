@@ -10,6 +10,7 @@
       }
     ]
   ],
+  "sourceMaps": "inline",
   "env": {
     "production": {
       "presets": [
@@ -26,7 +27,8 @@
       ],
       "plugins": [
         "lodash"
-      ]
+      ],
+      "sourceMaps": false
     }
   },
   "plugins": [

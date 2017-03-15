@@ -1,4 +1,5 @@
 'use strict';
+process.env.DEBUG='nextion*';
 
 module.exports = function wallabyConfig (wallaby) {
   return {
@@ -13,8 +14,13 @@ module.exports = function wallabyConfig (wallaby) {
       type: 'node',
       runner: 'node',
       params: {
-        env: 'BABEL_ENV=development'
+        env: 'NEXTION_TEST_PORT=/dev/tty.SLAB_USBtoUART;DEBUG=nextion*'
       }
+    },
+    workers: {
+      initial: 1,
+      regular: 1,
+      recycle: true
     },
     testFramework: 'mocha',
     compilers: {
@@ -23,6 +29,7 @@ module.exports = function wallabyConfig (wallaby) {
     bootstrap: function bootstrap (wallaby) {
       const path = require('path');
       require(path.join(wallaby.projectCacheDir, 'test', 'harness'));
-    }
+    },
+    debug: true
   };
 };

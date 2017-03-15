@@ -2,7 +2,6 @@
 
 const tessel = require('tessel');
 const Nextion = require('nextion');
-// const nextion = require('../dist/index');
 
 const uart = new tessel.port.A.UART({
   baudrate: 9600
@@ -10,9 +9,19 @@ const uart = new tessel.port.A.UART({
 
 Nextion.fromSerial(uart)
   .then(nextion => {
-    console.log('Listening...');
+    console.log('Ready!');
+    nextion.system.setNoTouchSleepTimer(10000)
+      .then(() => {
+        console.log('Device will sleep after 10 seconds w/o user interaction.');
+        nextion.on('autoSleep', () => {
+          console.log('Sleeping again?');
 
-    nextion.on('touchEvent', data => {
-      console.log(data);
-    });
+          setTimeout(() => {
+            nextion.system.wake()
+              .then(() => {
+                console.log('Rise and shine!');
+              });
+          }, 5000);
+        });
+      });
   });

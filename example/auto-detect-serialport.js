@@ -1,13 +1,23 @@
 'use strict';
 
 const Nextion = require('nextion');
-// const nextion = require('../dist/index');
 
+// we'll make a WAG at what port it's on
 Nextion.create()
   .then(nextion => {
-    console.log('Listening...');
+    console.log('Ready!');
+    nextion.system.setNoTouchSleepTimer(10000)
+      .then(() => {
+        console.log('Device will sleep after 10 seconds w/o user interaction.');
+        nextion.on('autoSleep', () => {
+          console.log('Sleeping again?');
 
-    nextion.on('touchEvent', data => {
-      console.log(data);
-    });
+          setTimeout(() => {
+            nextion.system.wake()
+              .then(() => {
+                console.log('Rise and shine!');
+              });
+          }, 5000);
+        });
+      });
   });

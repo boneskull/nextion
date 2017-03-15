@@ -62,13 +62,19 @@ Nextion.fromSerial(uart)
 
 The `nextion/minimal` module is for resource-constrained systems; it's compressed and does not include source maps.
 
-### Notes
+### Compatibility
 
 As long as the argument passed into `Nextion.fromSerial` is a [Duplex stream](https://nodejs.org/api/stream.html#stream_class_stream_duplex) or a duck-typed one (a la [serialport](https://www.npmjs.com/package/serialport)), you should be able to use it.  Hack away!
 
 ## API Docs
 
 TODO
+
+## Development
+
+- Use environment variable `DEBUG=nextion*` for debug output.
+- To run end-to-end tests against a connected device, read `test/e2e/README.md`, then execute `yarn test:e2e`.
+- For serial port debugging, use `DEBUG=nextion*,serialport`.
 
 ## Events
 

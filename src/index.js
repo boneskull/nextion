@@ -1,22 +1,23 @@
-import 'source-map-support/register';
 import {Nextion} from './nextion';
 import {NextionProtocol} from './protocol';
 import {UART} from './uart';
 
-Nextion.from = Nextion.create = function from (port, opts = {}) {
-  return UART.from(port, opts)
-    .then(uart => new Nextion(uart));
-};
+function instantiate (uart, opts) {
+  return new Promise(resolve => {
+    const nextion = new Nextion(uart, opts, () => {
+      resolve(nextion);
+    });
+  });
+}
 
-Nextion.fromSerial = function fromSerial (serialPort, opts = {}) {
-  return UART.fromSerial(serialPort, opts)
-    .then(uart => new Nextion(uart));
-};
+Nextion.from = Nextion.create = (port, opts) => UART.from(port, opts)
+  .then(instantiate);
 
-Nextion.fromPort = function fromPort (portName, opts = {}) {
-  return UART.fromPort(portName, opts)
-    .then(uart => new Nextion(uart));
-};
+Nextion.fromSerial = (serialPort, opts) => UART.fromSerial(serialPort, opts)
+  .then(instantiate);
+
+Nextion.fromPort = (portName, opts) => UART.fromPort(portName, opts)
+  .then(instantiate);
 
 Nextion.NextionProtocol = NextionProtocol;
 Nextion.UART = UART;

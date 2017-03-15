@@ -23,9 +23,9 @@ export class System extends EventEmitter {
   setSystemVariable (name, value) {
     return Promise.resolve()
       .then(() => {
-        if (!_.includes(SYSTEM_VARIABLES, name)) {
+        if (!_.includes(name, SYSTEM_VARIABLES)) {
           throw new Error(
-            `"name" must be one of: ${SYSTEM_VARIABLES.join(', ')}`);
+            `"name" must be one of: ${SYSTEM_VARIABLES.join(', ')}, but found "${name}"`);
         }
         if (!isUnsignedInteger(value)) {
           throw new Error('"value" must be an unsigned integer <= 4294967295');
@@ -61,6 +61,10 @@ export class System extends EventEmitter {
       }
     })
       .then(() => this.uart.request('rand'));
+  }
+
+  setNoTouchSleepTimer (ms = 0) {
+    return this.uart.setValue('thsp', Math.floor(ms / 1000));
   }
 
   sleep () {

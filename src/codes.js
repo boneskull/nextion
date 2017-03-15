@@ -35,4 +35,4 @@ const eventCodes = {
 };
 
 export const eventCodeMap = new Map(_.toPairs(eventCodes));
-export const executionCodeMap = new Map(_.toPairs(executionCodes));
+export const responseCodeMap = new Map(_.toPairs(executionCodes));

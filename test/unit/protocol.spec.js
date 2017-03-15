@@ -1,4 +1,4 @@
-import {NextionProtocol} from '../src/protocol';
+import {NextionProtocol} from '../../src/protocol';
 
 describe('NextionProtocol', function () {
   let sbx;

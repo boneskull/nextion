@@ -1,5 +1,8 @@
-import {UART} from '../src/uart';
-import {MockSerialPort} from './harness';
+import {UART} from '../../src/uart';
+import {MockSerialPort} from '../harness';
+import {delimiter} from '../../src/protocol';
+
+const SUCCESS = Buffer.from([0x01].concat(delimiter));
 
 expect.addType({
   name: 'UART',
@@ -65,58 +68,42 @@ describe('UART', function () {
       uart = new UART(port);
     });
 
-    describe('assertPortOpen()', function () {
-      describe('when the port does not exist', function () {
-        beforeEach(function () {
-          uart.port = null;
-        });
-        it('should throw', function () {
-          expect(() => uart.assertPortOpen(), 'to throw', Error);
-        });
-      });
-
-      describe('when the port exists', function () {
-        describe('but is closed', function () {
-          beforeEach(function () {
-            uart.port.close();
-          });
-          it('should throw', function () {
-            expect(() => uart.assertPortOpen(), 'to throw', Error);
-          });
-        });
-      });
-
-      describe('when the port exists and is open', function () {
-        it('should not throw', function () {
-          expect(() => uart.assertPortOpen(), 'not to throw');
-        });
-      });
-    });
-
     describe('bind()', function () {
       beforeEach(function () {
         sbx.spy(port, 'on');
+        sbx.stub(port, 'write', function (data, callback) {
+          process.nextTick(() => {
+            callback();
+            process.nextTick(() => {
+              this.emit('data', SUCCESS);
+            });
+          });
+        });
       });
 
       it(`should listen for port's "data" event`, function () {
-        uart.bind();
-        expect(port.on, 'was called with', 'data');
+        return uart.bind()
+          .then(() => {
+            expect(port.on, 'was called with', 'data');
+          });
       });
 
       it(`should listen for port's "error" event`, function () {
-        uart.bind();
-        expect(port.on, 'was called with', 'error');
+        return uart.bind()
+          .then(() => {
+            expect(port.on, 'was called with', 'error');
+          });
       });
 
       describe('when port emits "error"', function () {
         beforeEach(function () {
-          uart.bind();
+          return uart.bind();
         });
 
         it('should cause UART to emit "error"', function () {
           const err = new Error();
-          expect(() => port.emit('error', err), 'to emit from', uart,
-            'error', err);
+          expect(() => port.emit('error', err), 'to emit from', uart, 'error',
+            err);
         });
       });
     });

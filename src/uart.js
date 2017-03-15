@@ -1,26 +1,44 @@
 import {EventEmitter} from 'events';
 import Serialport from 'serialport';
 import _ from 'lodash/fp';
-import {delimiter, delimiterBuffer, readEvent, readExecValue} from './protocol';
-import debug from 'debug';
+import {delimiter, delimiterBuffer, read} from './protocol';
+import debug_ from 'debug';
 import pMapSeries from 'p-map-series';
+import pify from 'pify';
 
+/**
+ * Factory default baud rate of Nextion is 9600
+ * @type {number}
+ */
 export const DEFAULT_BAUD_RATE = 9600;
 
-const PORT_GUESS_REGEX = /usb|acm|^com/i;
+/**
+ * This tells the Nextion to return a command result even if command succeeded
+ * @type {string}
+ */
+export const DEFAULT_RETURN_COMMAND_RESULT = 'always';
+
 /**
  * Timeout in ms we should wait for response from Nextion for various requests
  * @type {number}
  */
-const REQUEST_TIMEOUT = 5000;
-const txDebug = debug('nextion:uart:tx');
-const rxDebug = debug('nextion:uart:rx');
+export const REQUEST_TIMEOUT = 1000;
+
+const PORT_GUESS_REGEX = /usb|acm|^com/i;
+const txDebug = debug_('nextion:UART:TX');
+const rxDebug = debug_('nextion:UART:RX');
+const debug = debug_('nextion:UART');
 
 const isValidPort = _.allPass([
   _.isObject,
   _.pipe(_.property('on'), _.isFunction),
   _.pipe(_.property('write'), _.isFunction)
 ]);
+
+const applyDefaults = _.defaults({
+  returnCommandResult: DEFAULT_RETURN_COMMAND_RESULT,
+  baudRate: DEFAULT_BAUD_RATE
+});
 
 /**
  * Whether or not to expect the Nextion device to return success/failure codes
@@ -44,7 +62,6 @@ const isValidPort = _.allPass([
  * interaction with a Nextion over UART.
  */
 export class UART extends EventEmitter {
-
   /**
    * Sets some default options
    * @param {events.EventEmitter|stream.Duplex} port - Serial port interface
@@ -57,41 +74,40 @@ export class UART extends EventEmitter {
       throw new TypeError('"port" must be a Serialport-like object');
     }
 
+    this.opts = applyDefaults(opts);
     this.port = port;
-
-    this.opts = _.defaults({
-      returnCommandResult: 'always'
-    }, opts);
 
     this.on('data', data => {
       try {
-        const result = readEvent(data);
-        if (result) {
-          rxDebug(`Event "${result.code}"`, result.data);
-          this.emit('event', result.code, result.data);
+        const result = read(data);
+        if (result.type === 'event') {
+          rxDebug(`Event "${result.name}" (${result.codeByte}); data:`,
+            result.data);
+          this.emit('event', result);
+        } else {
+          rxDebug(`Response "${result.name}" (${result.codeByte})`);
+          this.emit('response', result);
         }
       } catch (err) {
         this.emit('error', err);
       }
     });
-  }
 
-  get returnCommandResult () {
-    return this.opts.returnCommandResult;
-  }
+    // Is there a better way to do this?
+    const waitForReadiness = () => {
+      this.ready = new Promise(resolve => {
+        this.once('connected', () => {
+          debug('UART ready!');
+          this.once('disconnect', () => {
+            debug('UART disconnected!');
+            waitForReadiness();
+          });
+        });
+        resolve();
+      });
+    };
 
-  set returnCommandResult (value) {
-    this.setReturnCommandResult(value);
-  }
-
-  /**
-   * Asserts {@link UART#port} is open.
-   * @throws {Error} Port object must be truthy and not closed.
-   */
-  assertPortOpen () {
-    if (!this.port || this.port.isClosed === true) {
-      throw new Error('port not open!');
-    }
+    waitForReadiness();
   }
 
   /**
@@ -99,75 +115,105 @@ export class UART extends EventEmitter {
    * Corrects booleans to 0/1.
    * @param {string} variableName - Name of variable, component, system var,
    *   page, etc.
-   * @param {*} value - Likely a primitive.
+   * @param {*} [value] - Will be coerced to a string.
    * @returns {Promise<*>}
+   * @public
    */
   setValue (variableName, value) {
-    if (value === true) {
-      value = 1;
-    } else if (value === false) {
-      value = 0;
-    }
-    return this.request(`${variableName}=${value}`);
+    return this.ready.then(() => {
+      if (value === true) {
+        value = 1;
+      } else if (value === false) {
+        value = 0;
+      }
+      return this.request(`${variableName}=${value}`);
+    });
   }
 
   /**
-   * Sends a raw command; does not wait for response.  Unless you really can't
-   * guarantee a response, don't use this method, and use {@link UART#request}
-   * instead.
-   * @param {string} command - Raw ASCII command
-   * @returns {UART}
-   * @fires UART#error
+   * Wraps serial port's write() in a Promise
+   * @param {Buffer} data - Data to write
+   * @returns {Promise<UART>} UART instance
+   * @private
    */
-  send (command) {
-    try {
-      this.assertPortOpen();
-      this.port.write(`${command}\n`);
-      txDebug(`Sent: ${command}`);
-      this.port.write(delimiterBuffer);
-    } catch (err) {
-      /**
-       * Emitted if {@link UART#assertPortOpen} throws.
-       * @type Error
-       * @event UART#error
-       */
-      this.emit('error', err);
-    }
-    return this;
+  write (data) {
+    return new Promise((resolve, reject) => {
+      if (!Buffer.isBuffer(data)) {
+        return reject(new Error('Expected Buffer'));
+      }
+      txDebug('Writing:', data);
+      this.port.write(data, err => {
+        if (err) {
+          return reject(err);
+        }
+        this.port.drain(err => {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+    })
+      .then(() => {
+        txDebug('Wrote:', data || '(empty string)');
+        return this;
+      });
+  }
+
+  /**
+   * Sends a raw command; does not wait for response.
+   * @param {string} [command] - Raw ASCII command, or nothing at all
+   * @private
+   * @returns {Promise<UART>}
+   */
+  send (command = '') {
+    txDebug('Sending:', command);
+    return this.write(Buffer.concat([
+      Buffer.from(command),
+      delimiterBuffer
+    ]))
+      .then(() => {
+        txDebug('Sent:', command || '(empty string)');
+        return this;
+      });
   }
 
   /**
    * Makes a request to a Nextion device, expecting a response.
    * @param {Array<string>|string} commands - Command(s) to execute
+   * @public
    * @returns {Promise<*>} Result or array of results
    */
   request (commands = []) {
-    try {
-      this.assertPortOpen();
-    } catch (err) {
-      this.emit('error', err);
-    }
-    commands = [].concat(commands);
-    return pMapSeries(commands, command => {
-      txDebug('Beginning request');
-      return new Promise((resolve, reject) => {
-        const handler = data => {
-          const result = readExecValue(data);
-          if (result) {
-            rxDebug(`Received: %j`, result);
+    return this.ready.then(() => {
+      commands = [].concat(commands);
+      return pMapSeries(commands, command => {
+        txDebug('Beginning request');
+        return new Promise((resolve, reject) => {
+          const handler = result => {
+            rxDebug('Received', result);
             clearTimeout(t);
             return resolve(result);
-          }
-          this.once('data', handler);
-        };
-        this.once('data', handler);
-        const t = setTimeout(() => {
-          reject(new Error(`Timeout of ${REQUEST_TIMEOUT}ms exceeded`));
+          };
+
+          this.once('response', handler);
+
+          const t = setTimeout(() => {
+            this.removeListener('response', handler);
+            reject(new Error(`Timeout of ${REQUEST_TIMEOUT}ms exceeded`));
+          }, REQUEST_TIMEOUT);
+
+          this.send(command)
+            .catch(err => {
+              this.removeListener('response', handler);
+              reject(err);
+            });
         });
-        this.send(command);
       });
-    }, {concurrency: 1})
-      .then(results => commands.length === 1 ? results.shift() : results);
+    })
+      .then(results => commands.length === 1
+        ? results.shift()
+        : results);
   }
 
   /**
@@ -178,15 +224,15 @@ export class UART extends EventEmitter {
    * Errors bubble up from the serial port object thru the UART instance.
    * @param {events.EventEmitter|stream.Duplex} [port] - `Serialport`-like
    *   object to listen for data and errors on.  Defaults to {@link UART#port}.
-   * @returns {UART}
+   * @public
+   * @returns {Promise<UART>}
    */
   bind (port) {
     port = port || this.port;
-
+    let nextDelimiterIndex = 0;
+    let buf = [];
     port.on('data', data => {
-      rxDebug('Data:', data);
-      let nextDelimiterIndex = 0;
-      let buf = [];
+      rxDebug('Raw data:', data);
       // this is torn from serialport's byte delimiter parser, considering
       // we aren't ensured a Serialport object.
       Array.from(data)
@@ -196,21 +242,33 @@ export class UART extends EventEmitter {
             nextDelimiterIndex++;
           }
           if (nextDelimiterIndex === delimiter.length) {
+            buf = Buffer.from(buf);
+            rxDebug('Parsed data:', buf);
             this.emit('data', buf);
             buf = [];
             nextDelimiterIndex = 0;
           }
         });
-    });
+    })
+      .on('error', err => {
+        this.emit('error', err);
+      })
+      .on('close', () => {
+        this.emit('disconnect');
+        this.port = null;
+        delete this.port;
+      })
+      .on('disconnect', err => {
+        this.emit('error', err);
+      });
 
-    port.on('error', err => {
-      this.emit('error', err);
-    });
-
-    this.send();
-    this.setReturnCommandResult(this.returnCommandResult);
-
-    return this;
+    debug('Configuring device...');
+    return this.send('sleep=0')
+      .then(() => this.setReturnCommandResult(this.opts.returnCommandResult))
+      .then(() => {
+        this.emit('connected');
+        return this;
+      });
   }
 
   /**
@@ -219,42 +277,54 @@ export class UART extends EventEmitter {
    * @param {string|number|boolean} [value='always'] - false, 0 or "none" to
    *   disable waiting for responses; true, 1 or "always" to enable waiting for
    *   responses.
-   * @returns {UART}
+   * @private
+   * @returns {Promise<UART>}
    */
   setReturnCommandResult (value = 'always') {
-    let newValue;
+    let commandValue;
+
     switch (value) {
       case false:
       case 0:
       // falls through
       case 'none':
-        newValue = 0;
+        commandValue = 0;
         break;
       case 3:
       case true:
       // falls through
       case 'always':
       default:
-        newValue = 3;
+        commandValue = 3;
     }
-    this.send(`bkcmd=${newValue}`);
-    this.opts.returnCommandResult = value;
+
+    return this.send(`bkcmd=${commandValue}`)
+      .then(() => {
+        this.opts.returnCommandResult = value;
+        debug(`returnCommandResult is now "${value}"`);
+        return this;
+      });
   }
 
   /**
    * Stops listening on the serial port, closes it, destroys the reference,
-   * etc.
-   * @returns {UART}
+   * kills a kitten, etc.
+   * @returns {Promise<UART>}
+   * @public
    */
   unbind () {
-    this.port.removeAllListeners('data');
-    this.port.removeAllListeners('error');
-    if (_.isFunction(this.port.close)) {
-      this.port.close();
-    }
+    const port = this.port;
     this.port = null;
     delete this.port;
-    return this;
+    if (_.isFunction(port.close)) {
+      return pify(port.close.bind(port))()
+        .then(() => {
+          this.emit('disconnect');
+          return this;
+        });
+    }
+    this.emit('disconnect');
+    return Promise.resolve(this);
   }
 
   /**
@@ -263,6 +333,7 @@ export class UART extends EventEmitter {
    * @param {events.EventEmitter|stream.Duplex} serialPort - Serial port
    *   interface
    * @param {UARTOptions} [opts={}] - Options
+   * @public
    * @returns {Promise.<UART>}
    */
   static fromSerial (serialPort, opts = {}) {
@@ -277,6 +348,7 @@ export class UART extends EventEmitter {
    * @param {string|UARTOptions} [portName] - Serial port name or path, or
    *   options
    * @param {UARTOptions} [opts={}] - Options
+   * @public
    * @returns {Promise.<UART>}
    */
   static fromPort (portName, opts = {}) {
@@ -285,20 +357,11 @@ export class UART extends EventEmitter {
       portName = portName.port;
     }
 
-    opts = _.defaults({
-      baudRate: DEFAULT_BAUD_RATE
-    });
+    opts = applyDefaults(opts);
 
-    if (!portName) {
-      return UART.findPort()
-        .then(portName => {
-          if (!portName) {
-            throw new Error('Could not find a serial device!');
-          }
-          return portName;
-        });
-    } else {
+    if (portName) {
       return new Promise((resolve, reject) => {
+        debug(`Opening port "${portName}" with opts`, opts);
         const serialPort = new Serialport(portName, opts, err => {
           if (err) {
             return reject(err);
@@ -306,7 +369,18 @@ export class UART extends EventEmitter {
           resolve(serialPort);
         });
       })
-        .then(serialPort => UART.fromSerial(serialPort, opts));
+        .then(serialPort => {
+          debug(`Opened connection to port "${portName}"`);
+          return UART.fromSerial(serialPort, _.assign(opts, {portName}));
+        });
+    } else {
+      return UART.findPort()
+        .then(portName => {
+          if (!portName) {
+            throw new Error('Could not find a serial device!');
+          }
+          return UART.fromPort(portName, opts);
+        });
     }
   }
 
@@ -314,26 +388,23 @@ export class UART extends EventEmitter {
    * Convenience wrapper of {@link UART.fromPort} and {@link UART.fromSerial}.
    * @param {string|events.EventEmitter|stream.Duplex|UARTOptions} [port] - Port
    * @param {UARTOptions} [opts] - Options
-   * @returns {Promise.<UART>}
+   * @public
+   * @returns {Promise<UART>}
    */
   static from (port, opts = {}) {
-    return _.isObject(port) && _.isFunction(port.on) ? UART.fromSerial(port,
-      opts) : UART.fromPort(port, opts);
+    return isValidPort(port)
+      ? UART.fromSerial(port, opts)
+      : UART.fromPort(port, opts);
   }
 
   /**
    * Tries to find a device on a serial/COM port.
-   * @returns {Promise<string|void>} Name/path of promising serial port, if any
+   * @returns {Promise<string|void>} - Name/path of promising serial port, if
+   *   any
+   * @private
    */
   static findPort () {
-    return new Promise((resolve, reject) => {
-      Serialport.list((err, data) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(data);
-      });
-    })
+    return pify(Serialport.list)()
       .then(_.pipe(_.pluck('comName'),
         _.filter(portName => PORT_GUESS_REGEX.test(portName)), _.head));
   }

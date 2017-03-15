@@ -11,15 +11,21 @@ export class MockSerialPort extends EventEmitter {
     this.isClosed = false;
   }
 
-  write () {
+  write (data, callback) {
+    process.nextTick(callback);
   }
 
-  close () {
+  close (callback) {
     this.isClosed = true;
+    process.nextTick(callback);
   }
 
   list (callback) {
+    process.nextTick(callback);
+  }
 
+  drain (callback) {
+    process.nextTick(callback);
   }
 }
 

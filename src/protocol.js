@@ -1,6 +1,9 @@
 import {createProtocol} from 'bin-protocol';
-import {eventCodeMap, executionCodeMap} from './codes';
+import {eventCodeMap, responseCodeMap} from './codes';
 import _ from 'lodash/fp';
+import debug_ from 'debug';
+import {hexStr} from './util';
+const debug = debug_('nextion:protocol');
 
 const NextionProtocol = createProtocol(function () {
   // this is mostly here for the convenience of a 3p consumer.
@@ -19,13 +22,13 @@ const readers = {
   byte (name) {
     this.UInt8(name);
   },
-  code () {
+  eventCode () {
     this.byte('code');
-    const code = eventCodeMap.get(String(this.context.code));
-    if (!code) {
-      throw new Error(`Unknown code: ${this.context.code}`);
-    }
-    return code;
+    return eventCodeMap.get(String(this.context.code));
+  },
+  responseCode () {
+    this.byte('code');
+    return responseCodeMap.get(String(this.context.code));
   },
   touchEvent () {
     this.pageId()
@@ -62,37 +65,42 @@ Object.keys(readers)
     });
   });
 
-export function readEvent (data) {
-  if (!Buffer.isBuffer(data)) {
-    data = Buffer.from(data);
+export function read (data) {
+  const code = data.readUInt8(0);
+  debug('Code:', hexStr(code));
+  let name = responseCodeMap.get(String(code));
+  if (name) {
+    return {
+      name,
+      codeByte: hexStr(code),
+      code,
+      type: 'response'
+    };
   }
-  const codeByte = data.slice(0, 1);
-  const code = nextionProtocol.read(codeByte)
-    .code().result;
-  const result = {
-    code
-  };
-  const reader = nextionProtocol.read(data.slice(1));
-  if (_.isFunction(reader[code])) {
-    result.data = reader[code]().result;
+  name = eventCodeMap.get(String(code));
+  if (name) {
+    const result = {
+      name,
+      codeByte: hexStr(code),
+      code,
+      type: 'event'
+    };
+    const reader = nextionProtocol.read(data.slice(1));
+    if (_.isFunction(reader[name])) {
+      result.data = reader[name]().result;
+    }
+    return result;
   }
-  return result;
-}
-
-export function readExecValue (data) {
-  if (!Buffer.isBuffer(data)) {
-    data = Buffer.from(data);
-  }
-  const code = executionCodeMap.has(String(data.slice(0, 1)));
-  if (!code) {
-    return {code: 'unknownResult', data: data};
-  }
-  return {code};
+  throw new Error(`Unknown data received: ${data.toString()}`);
 }
 
 export const nextionProtocol = new NextionProtocol();
 
 export {NextionProtocol};
 
-export const delimiter = [0xff, 0xff, 0xff];
+export const delimiter = [
+  0xff,
+  0xff,
+  0xff
+];
 export const delimiterBuffer = Buffer.from(delimiter);

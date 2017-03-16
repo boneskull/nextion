@@ -66,9 +66,7 @@ The `nextion/minimal` module is for resource-constrained systems; it's compresse
 
 As long as the argument passed into `Nextion.fromSerial` is a [Duplex stream](https://nodejs.org/api/stream.html#stream_class_stream_duplex) or a duck-typed one (a la [serialport](https://www.npmjs.com/package/serialport)), you should be able to use it.  Hack away!
 
-## API Docs
-
-TODO
+## [API docs](https://doc.esdoc.org/github.com/boneskull/nextion/)
 
 ## Development
 

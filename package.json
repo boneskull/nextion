@@ -30,7 +30,7 @@
     "p-map-series": "^1.0.0",
     "pify": "^2.3.0",
     "serialport": "^4.0.7",
-    "source-map-support": "^0.4.12"
+    "source-map-support": "^0.4.13"
   },
   "scripts": {
     "prebuild": "rimraf dist",
@@ -38,7 +38,7 @@
     "build:watch": "concurrently \"babel --watch --source-maps --out-dir dist src\" \"cross-env BABEL_ENV=production webpack --watch\"",
     "prepublish": "npm run build",
     "pretest": "eslint '*.js' test src",
-    "test": "nyc -a --include src --require babel-register mocha --require test/harness.js 'test/unit/*.spec.js'",
+    "test": "cross-env BABEL_ENV=test nyc mocha --require test/harness.js 'test/unit/**/*.spec.js'",
     "test:e2e": "mocha --require babel-register --require test/harness.js 'test/e2e/**/*.spec.js'",
     "preversion": "npm test",
     "docs": "esdoc"
@@ -46,14 +46,15 @@
   "devDependencies": {
     "babel-cli": "^6.24.0",
     "babel-core": "^6.24.0",
-    "babel-loader": "^6.4.0",
+    "babel-loader": "^6.4.1",
     "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-istanbul": "^4.0.0",
     "babel-plugin-lodash": "^3.2.11",
-    "babel-preset-env": "^1.2.1",
+    "babel-preset-env": "^1.2.2",
     "babel-register": "^6.24.0",
     "babili-webpack-plugin": "^0.0.11",
     "concurrently": "^3.4.0",
-    "cross-env": "^3.2.3",
+    "cross-env": "^3.2.4",
     "esdoc": "^0.5.2",
     "esdoc-node": "^1.0.1",
     "eslint": "^3.17.1",

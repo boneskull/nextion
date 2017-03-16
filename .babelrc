@@ -12,6 +12,23 @@
   ],
   "sourceMaps": "inline",
   "env": {
+    "test": {
+      "plugins": [
+        "add-module-exports",
+        "istanbul"
+      ],
+      "presets": [
+        [
+          "env",
+          {
+            "targets": {
+              "node": 4
+            },
+            "loose": true
+          }
+        ]
+      ]
+    },
     "production": {
       "presets": [
         [

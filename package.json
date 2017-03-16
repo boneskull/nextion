@@ -38,9 +38,10 @@
     "build:watch": "concurrently \"babel --watch --source-maps --out-dir dist src\" \"cross-env BABEL_ENV=production webpack --watch\"",
     "prepublish": "npm run build",
     "pretest": "eslint '*.js' test src",
-    "test": "nyc --require babel-register mocha --require test/harness.js 'test/unit/*.spec.js'",
+    "test": "nyc -a --include src --require babel-register mocha --require test/harness.js 'test/unit/*.spec.js'",
     "test:e2e": "mocha --require babel-register --require test/harness.js 'test/e2e/**/*.spec.js'",
-    "preversion": "npm test"
+    "preversion": "npm test",
+    "docs": "esdoc"
   },
   "devDependencies": {
     "babel-cli": "^6.24.0",
@@ -53,6 +54,8 @@
     "babili-webpack-plugin": "^0.0.11",
     "concurrently": "^3.4.0",
     "cross-env": "^3.2.3",
+    "esdoc": "^0.5.2",
+    "esdoc-node": "^1.0.1",
     "eslint": "^3.17.1",
     "eslint-config-semistandard": "^8.0.0",
     "eslint-config-standard": "^7.0.1",

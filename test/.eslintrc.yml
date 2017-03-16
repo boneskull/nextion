@@ -3,3 +3,6 @@ env:
 globals:
   sinon: true
   expect: true
+rules:
+  require-jsdoc: off
+  valid-jsdoc: off

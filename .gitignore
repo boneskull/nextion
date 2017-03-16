@@ -21,3 +21,4 @@ jspm_packages
 .yarn-integrity
 dist/
 minimal/
+doc/

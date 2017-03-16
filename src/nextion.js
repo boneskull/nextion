@@ -3,24 +3,40 @@ import {System} from './system';
 import debug_ from 'debug';
 import _ from 'lodash/fp';
 
+/**
+ * @ignore
+ */
 const debug = debug_('nextion:Nextion');
 
+/**
+ * Applies defaults to an object
+ * @param {NextionOptions} obj - Defaults are applied to this object
+ * @returns {NextionOptions} Options w/ defaults applied
+ * @function
+ * @private
+ */
 const applyDefaults = _.defaults({
   // XXX: does nothing yet
   enhanced: true
 });
 
+/**
+ * High-level abstraction for interacting with a Nextion device.
+ * @extends {EventEmitter}
+ */
 export class Nextion extends EventEmitter {
   /**
-   *
-   * @param {UART} uart - UART instance (serial port wrapper)
+   * Begins listening for data via a {@link UART} instance.
+   * @param {UART} uart - {@link UART} instance
    * @param {Object|Function} [opts] - Options or `connectListener`
    * @param {Function} [connectListener] - Callback to run when listening for
    *   Nextion data
+   * @emits {error} When binding via `uart` fails
+   * @throws {ReferenceError} When `uart` is missing
    */
   constructor (uart, opts = {}, connectListener = _.noop) {
     if (!uart) {
-      throw new Error(
+      throw new ReferenceError(
         'Invalid parameters; Use Nextion.from(), Nextion.fromSerial(), or Nextion.fromPort()');
     }
 
@@ -36,7 +52,18 @@ export class Nextion extends EventEmitter {
       connectListener();
     });
 
+    /**
+     * Options
+     * @type {Object}
+     * @private
+     */
     this.opts = applyDefaults(opts);
+
+    /**
+     * Internal UART instance
+     * @type {UART}
+     * @private
+     */
     this.uart = uart;
 
     // when a Nextion event occurs, re-emit it with event name
@@ -55,25 +82,39 @@ export class Nextion extends EventEmitter {
         this.emit('error', err);
       });
 
+    /**
+     * System-level Nextion commands
+     * @type {System}
+     */
     this.system = new System(uart);
 
     debug('Instantiated');
   }
 
   /**
-   * Sets a variable on the current page to a value
+   * Sets a local or global variable on the current page to a value
    * @param {string} name - Name of variable
-   * @param {*} [value] - Value to set variable to
-   * @returns {Promise.<*>}
+   * @param {*} [value] - New variable value
+   * @returns {Promise<ResponseResult>} Result
    */
   setValue (name, value) {
     return this.uart.setValue(name, value);
   }
 
-  setComponentValue (componentName, value) {
-    return this.setVariableValue(`${componentName}.val`, value);
+  /**
+   * Sets a the value of a local component
+   * @param {string} name - Name of component
+   * @param {*} [value] - New component value
+   * @returns {Promise<ResponseResult>} Result
+   */
+  setComponentValue (name, value) {
+    return this.setVariableValue(`${name}.val`, value);
   }
 
+  /**
+   * Closes connection to Nextion device.
+   * @returns {Promise<Nextion>} This instance
+   */
   close () {
     return this.uart.unbind()
       .then(() => {

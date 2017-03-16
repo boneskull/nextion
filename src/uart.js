@@ -1,40 +1,63 @@
 import {EventEmitter} from 'events';
 import Serialport from 'serialport';
 import _ from 'lodash/fp';
-import {delimiter, delimiterBuffer, read} from './protocol';
-import debug_ from 'debug';
 import pMapSeries from 'p-map-series';
 import pify from 'pify';
+import debug_ from 'debug';
+
+import {delimiter, delimiterBuffer, read} from './protocol';
+import {isValidPort} from './util';
 
 /**
  * Factory default baud rate of Nextion is 9600
+ * @private
  * @type {number}
  */
 export const DEFAULT_BAUD_RATE = 9600;
 
 /**
  * This tells the Nextion to return a command result even if command succeeded
+ * @private
  * @type {string}
  */
 export const DEFAULT_RETURN_COMMAND_RESULT = 'always';
 
 /**
  * Timeout in ms we should wait for response from Nextion for various requests
+ * @private
  * @type {number}
  */
 export const REQUEST_TIMEOUT = 1000;
 
+/**
+ * We use this to find a reasonable serial port
+ * @private
+ * @type {RegExp}
+ */
 const PORT_GUESS_REGEX = /usb|acm|^com/i;
+
+/**
+ * @ignore
+ */
 const txDebug = debug_('nextion:UART:TX');
+
+/**
+ * @ignore
+ */
 const rxDebug = debug_('nextion:UART:RX');
+
+/**
+ * @ignore
+ */
 const debug = debug_('nextion:UART');
 
-const isValidPort = _.allPass([
-  _.isObject,
-  _.pipe(_.property('on'), _.isFunction),
-  _.pipe(_.property('write'), _.isFunction)
-]);
-
+/**
+ * Applies defaults to an object
+ * @param {NextionOptions} obj - Defaults are applied to this object
+ * @returns {NextionOptions} Options w/ defaults applied
+ * @function
+ * @private
+ */
 const applyDefaults = _.defaults({
   returnCommandResult: DEFAULT_RETURN_COMMAND_RESULT,
   baudRate: DEFAULT_BAUD_RATE
@@ -44,28 +67,22 @@ const applyDefaults = _.defaults({
  * Whether or not to expect the Nextion device to return success/failure codes
  * after each serial command.  Defaults to "always".
  * @typedef {string|boolean|number} ReturnCommandResultValue
- */
-
-/**
- * Options for creating a UART option.  Some properties may be ignored if a
- * Serialport or similar object has been provided when calling the factory
- * functions.
- * @typedef {Object} UARTOptions
- * @property {ReturnCommandResultValue} returnCommandResult - Value
- * @property {string} port - Name (e.g. "COM3") or path (e.g. "/dev/ttyUSB0")
- * @property {number} baudRate - Defaults to 9600
- * @property {Function} parser - Serialport parser; defaults to byte delimiter
+ * @private
  */
 
 /**
  * Wraps a SerialPort or similar object; provides convenience methods for
  * interaction with a Nextion over UART.
+ * @emits {error} When {@link UART#port} emits `error` or is unexpectedly
+ *   disconnected, or when we receive unknown data from the device.
+ * @emits {close} When {@link UART#close} successfully completes
+ * @extends {EventEmitter}
  */
 export class UART extends EventEmitter {
   /**
    * Sets some default options
-   * @param {events.EventEmitter|stream.Duplex} port - Serial port interface
-   * @param {UARTOptions} [opts={}] - Options
+   * @param {EventEmitter|Duplex} port - Serial port interface
+   * @param {NextionOptions} [opts={}] - Options
    */
   constructor (port, opts = {}) {
     super();
@@ -74,8 +91,25 @@ export class UART extends EventEmitter {
       throw new TypeError('"port" must be a Serialport-like object');
     }
 
+    /**
+     * Options
+     * @type {NextionOptions}
+     * @private
+     */
     this.opts = applyDefaults(opts);
+
+    /**
+     * Internal serial port object
+     * @type {Serialport|Duplex|*}
+     * @private
+     */
     this.port = port;
+
+    /**
+     * `true` once we've successfully began listening via {@link UART#bind}.
+     * @type {boolean}
+     */
+    this.ready = false;
 
     this.on('data', data => {
       try {
@@ -91,35 +125,28 @@ export class UART extends EventEmitter {
       } catch (err) {
         this.emit('error', err);
       }
-    });
-
-    // Is there a better way to do this?
-    const waitForReadiness = () => {
-      this.ready = new Promise(resolve => {
-        this.once('connected', () => {
-          debug('UART ready!');
-          this.once('disconnect', () => {
-            debug('UART disconnected!');
-            waitForReadiness();
-          });
-        });
-        resolve();
+    })
+      .on('connect', () => {
+        this.ready = true;
+      })
+      .on('close', () => {
+        this.ready = false;
       });
-    };
-
-    waitForReadiness();
   }
 
   /**
    * Set variable `variableName` to value `value`.
-   * Corrects booleans to 0/1.
+   * Boolean values `true` and `false` become `1` and `0`, respectively.
    * @param {string} variableName - Name of variable, component, system var,
    *   page, etc.
    * @param {*} [value] - Will be coerced to a string.
-   * @returns {Promise<*>}
-   * @public
+   * @returns {Promise<ResponseResult, Error>} Result of setting value, or
+   *   {@link Error} if device is not ready.
    */
   setValue (variableName, value) {
+    if (!this.ready) {
+      return Promise.reject(new Error('Device not ready!'));
+    }
     return this.ready.then(() => {
       if (value === true) {
         value = 1;
@@ -131,15 +158,16 @@ export class UART extends EventEmitter {
   }
 
   /**
-   * Wraps serial port's write() in a Promise
+   * Wraps port's `write()` in a {@link Promise}
    * @param {Buffer} data - Data to write
-   * @returns {Promise<UART>} UART instance
+   * @returns {Promise<UART, TypeError>} UART instance, or {@link TypeError} if
+   *   `data` is not a {@link Buffer}.
    * @private
    */
   write (data) {
     return new Promise((resolve, reject) => {
       if (!Buffer.isBuffer(data)) {
-        return reject(new Error('Expected Buffer'));
+        return reject(new TypeError('Expected Buffer'));
       }
       txDebug('Writing:', data);
       this.port.write(data, err => {
@@ -164,7 +192,7 @@ export class UART extends EventEmitter {
    * Sends a raw command; does not wait for response.
    * @param {string} [command] - Raw ASCII command, or nothing at all
    * @private
-   * @returns {Promise<UART>}
+   * @returns {Promise<UART>} This UART instance
    */
   send (command = '') {
     txDebug('Sending:', command);
@@ -180,35 +208,37 @@ export class UART extends EventEmitter {
 
   /**
    * Makes a request to a Nextion device, expecting a response.
-   * @param {Array<string>|string} commands - Command(s) to execute
-   * @public
-   * @returns {Promise<*>} Result or array of results
+   * @param {string[]|string} commands - Command(s) to execute
+   * @param {number} [timeout=1000] - How long to wait for response (in ms)
+   * @returns {Promise<ResponseResult[]|ResponseResult,Error>} Result or array
+   *   of results, or {@link Error} if device is not ready.
    */
-  request (commands = []) {
-    return this.ready.then(() => {
-      commands = [].concat(commands);
-      return pMapSeries(commands, command => {
-        txDebug('Beginning request');
-        return new Promise((resolve, reject) => {
-          const handler = result => {
-            rxDebug('Received', result);
-            clearTimeout(t);
-            return resolve(result);
-          };
+  request (commands = [], timeout = REQUEST_TIMEOUT) {
+    if (!this.ready) {
+      return Promise.reject(new Error('Device not ready!'));
+    }
+    commands = [].concat(commands);
+    return pMapSeries(commands, command => {
+      txDebug('Beginning request');
+      return new Promise((resolve, reject) => {
+        const handler = result => {
+          rxDebug('Received', result);
+          clearTimeout(t);
+          return resolve(result);
+        };
 
-          this.once('response', handler);
+        this.once('response', handler);
 
-          const t = setTimeout(() => {
+        const t = setTimeout(() => {
+          this.removeListener('response', handler);
+          reject(new Error(`Timeout of ${timeout}ms exceeded`));
+        }, timeout);
+
+        this.send(command)
+          .catch(err => {
             this.removeListener('response', handler);
-            reject(new Error(`Timeout of ${REQUEST_TIMEOUT}ms exceeded`));
-          }, REQUEST_TIMEOUT);
-
-          this.send(command)
-            .catch(err => {
-              this.removeListener('response', handler);
-              reject(err);
-            });
-        });
+            reject(err);
+          });
       });
     })
       .then(results => commands.length === 1
@@ -222,10 +252,9 @@ export class UART extends EventEmitter {
    * human-readable name will be emitted, along with any extra data, if
    * present.
    * Errors bubble up from the serial port object thru the UART instance.
-   * @param {events.EventEmitter|stream.Duplex} [port] - `Serialport`-like
+   * @param {EventEmitter|Duplex} [port] - `Serialport`-like
    *   object to listen for data and errors on.  Defaults to {@link UART#port}.
-   * @public
-   * @returns {Promise<UART>}
+   * @returns {Promise<UART>} This UART instance
    */
   bind (port) {
     port = port || this.port;
@@ -266,7 +295,7 @@ export class UART extends EventEmitter {
     return this.send('sleep=0')
       .then(() => this.setReturnCommandResult(this.opts.returnCommandResult))
       .then(() => {
-        this.emit('connected');
+        this.emit('connect');
         return this;
       });
   }
@@ -274,11 +303,11 @@ export class UART extends EventEmitter {
   /**
    * Tell the Nextion device to wait (default) or not wait for responses when
    * requests are made.
-   * @param {string|number|boolean} [value='always'] - false, 0 or "none" to
-   *   disable waiting for responses; true, 1 or "always" to enable waiting for
-   *   responses.
+   * @param {string|number|boolean} [value='always'] - `false`, `0` or `'none'`
+   *   to disable waiting for responses; `true`, `1` or `'always'` to enable
+   *   waiting for responses.
    * @private
-   * @returns {Promise<UART>}
+   * @returns {Promise<UART>} This UART instance
    */
   setReturnCommandResult (value = 'always') {
     let commandValue;
@@ -309,8 +338,9 @@ export class UART extends EventEmitter {
   /**
    * Stops listening on the serial port, closes it, destroys the reference,
    * kills a kitten, etc.
-   * @returns {Promise<UART>}
-   * @public
+   * Use {@link Nextion#close} instead.
+   * @returns {Promise<UART>} This UART instance
+   * @private
    */
   unbind () {
     const port = this.port;
@@ -329,12 +359,10 @@ export class UART extends EventEmitter {
 
   /**
    * Given a {@link Serialport}-like object, create a {@link UART} wrapper.
-   * Returns a `Promise` for consistency.
-   * @param {events.EventEmitter|stream.Duplex} serialPort - Serial port
-   *   interface
-   * @param {UARTOptions} [opts={}] - Options
-   * @public
-   * @returns {Promise.<UART>}
+   * Synchronous, but returns a {@link Promise} for consistency.
+   * @param {Serialport|Duplex|*} serialPort - {@link Serialport}-like object
+   * @param {NextionOptions} [opts={}] - Options
+   * @returns {Promise<UART>} New {@link UART} instance
    */
   static fromSerial (serialPort, opts = {}) {
     return Promise.resolve(new UART(serialPort, opts));
@@ -342,14 +370,12 @@ export class UART extends EventEmitter {
 
   /**
    * Given a serial port name or path, or object containing one, create a
-   * `Serialport` instance, open the serial port, then return a `UART`
-   * instance.
-   * If no port name is present, we'll try to detect the port.
-   * @param {string|UARTOptions} [portName] - Serial port name or path, or
+   * {@link Serialport} instance, open the serial port, then return a {@link
+   * UART} instance. If no port name is present, we'll try to autodetect the port.
+   * @param {string|NextionOptions} [portName] - Serial port name or path, or
    *   options
-   * @param {UARTOptions} [opts={}] - Options
-   * @public
-   * @returns {Promise.<UART>}
+   * @param {NextionOptions} [opts={}] - Options
+   * @returns {Promise<UART>} New {@link UART} instance
    */
   static fromPort (portName, opts = {}) {
     if (_.isObject(portName)) {
@@ -386,10 +412,9 @@ export class UART extends EventEmitter {
 
   /**
    * Convenience wrapper of {@link UART.fromPort} and {@link UART.fromSerial}.
-   * @param {string|events.EventEmitter|stream.Duplex|UARTOptions} [port] - Port
-   * @param {UARTOptions} [opts] - Options
-   * @public
-   * @returns {Promise<UART>}
+   * @param {string|Duplex|Serialport} [port] - Port name or object
+   * @param {NextionOptions} [opts] - Options
+   * @returns {Promise<UART>} New {@link UART} instance
    */
   static from (port, opts = {}) {
     return isValidPort(port)

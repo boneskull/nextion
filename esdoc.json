@@ -1,0 +1,26 @@
+{
+  "source": "./src",
+  "destination": "./doc",
+  "experimentalProposal": {
+    "classProperties": true,
+    "objectRestSpread": true,
+    "decorators": true,
+    "doExpressions": true,
+    "functionBind": true,
+    "asyncGenerators": true,
+    "exportExtensions": true,
+    "dynamicImport": true
+  },
+  "coverage": false,
+  "test": {
+    "type": "mocha",
+    "source": "./test/unit",
+    "includes": ["\\.spec\\.js$"]
+  },
+  "plugins": [
+    {
+      "name": "esdoc-node"
+    }
+  ],
+  "unexportIdentifier": true
+}

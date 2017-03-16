@@ -1,9 +1,16 @@
 extends:
-  - semistandard
-  - plugin:lodash-fp/recommended
+- semistandard
+- plugin:lodash-fp/recommended
 plugins:
-  - lodash-fp
+- lodash-fp
 rules:
   strict:
-    - error
-    - safe
+  - error
+  - safe
+  valid-jsdoc: error
+  require-jsdoc:
+  - error
+  - require:
+      FunctionDeclaration: true
+      MethodDefinition: true
+      ClassDeclaration: true

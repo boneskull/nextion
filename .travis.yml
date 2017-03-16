@@ -2,7 +2,6 @@ dist: trusty
 sudo: false
 language: node_js
 cache: yarn
-install: yarn install --ignore-engines
 node_js:
 - '7'
 - '6'

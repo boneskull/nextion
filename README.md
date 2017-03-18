@@ -6,9 +6,8 @@
 
 ## Status
 
-- [x] Support all non-success/error [return values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
-- [ ] Support all success/error messages
-- [ ] Send [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
+- [x] Support [return data](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data)
+- [ ] Support [operation commands](https://www.itead.cc/wiki/Nextion_Instruction_Set#Classification_I:_Operation_Commands_of_Component_and_System)
 - [ ] Reasonable, high-level API; don't require user to send raw commands
   - [ ] System-level abstraction
   - [ ] Component-level abstraction
@@ -68,29 +67,23 @@ As long as the argument passed into `Nextion.fromSerial` is a [Duplex stream](ht
 
 ## [API docs](https://doc.esdoc.org/github.com/boneskull/nextion/)
 
-## Development
-
-- Use environment variable `DEBUG=nextion*` for debug output.
-- To run end-to-end tests against a connected device, read `test/e2e/README.md`, then execute `yarn test:e2e`.
-- For serial port debugging, use `DEBUG=nextion*,serialport`.
-
 ## Events
 
 The `Nextion` instance (`nextion`) in above examples is an `EventEmitter`.  If the device sends any of these over the UART channel, the `Nextion` instance will emit a corresponding event (w/ data, if any).
 
-- [Return Values](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data) (Table 2)
-  - `touchEvent`: Touch event return data
-  - `pageId`: Current page ID
-  - `touchCoordinate`: Touch coordinate data
-  - `wake`: Touch event in sleep mode
-  - `stringData`: String variable data
-  - `numericData`: Numeric variable data
-  - `autoSleep`: Device automatically enters sleep mode
-  - `autoWake`: Device automatically wakes from sleep mode
-  - `startup`: Successful system startup
-  - `cardUpgrade`: Start SD card upgrade
-  - `transmitFinished`: Data transmit finished
-  - `transmitReady`: Ready to receive data transmission
+- [Events](https://www.itead.cc/wiki/Nextion_Instruction_Set#Format_of_Device_Return_Data) (Table 2)
+  - `0x65` - `touchEvent`: Touch event return data
+  - `0x66` - `pageId`: Current page ID
+  - `0x67` - `touchCoordinate`: Touch coordinate data
+  - `0x68` - `touchCoordinateOnWake`: Touch coordinate data (on wake)
+  - `0x70` - `stringData`: String variable data
+  - `0x71` - `numericData`: Numeric variable data
+  - `0x86` - `autoSleep`: Device automatically enters sleep mode
+  - `0x87` - `autoWake`: Device automatically wakes from sleep mode
+  - `0x88` - `startup`: Successful system startup
+  - `0x89` - `cardUpgrade`: Start SD card upgrade
+  - `0xfd` - `transmitFinished`: Data transmit finished
+  - `0xfe` - `transmitReady`: Ready to receive data transmission
 
 > TODO: Describe shape of data for data-emitting events.
 
@@ -106,18 +99,14 @@ Future:
 - Ensure support on popular ARMv6/7/8
 - Ensure support on popular (non-Tessel) MIPS devices
 - Interface into GUI designer commands
-- [Johnny-Five](http://johnny-five.io) support?
+
+## Development
+
+- Use environment variable `DEBUG=nextion*` for debug output.
+- To run end-to-end tests against a connected device, read `test/e2e/README.md`, then execute `yarn test:e2e`.
+- For serial port debugging, use `DEBUG=nextion*,serialport`.
 
 ## Notes
-
-### Johnny-Five
-
-Johnny-Five support is problematic, because:
-
-- Only "enhanced" Nextion models have any GPIO pins (8 PWM-capable pins)
-- All communication w/ the device is over UART, so an IO plugin would be extremely wonky 
-- No ADC, as far as I know
-- Any I2C or SPI communications would probably need to be handled by a daughter board
 
 ### ARM
 

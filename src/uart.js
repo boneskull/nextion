@@ -338,7 +338,6 @@ export class UART extends EventEmitter {
    * kills a kitten, etc.
    * Use {@link Nextion#close} instead.
    * @returns {Promise<UART>} This UART instance
-   * @private
    */
   unbind () {
     const port = this.port;

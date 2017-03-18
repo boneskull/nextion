@@ -20,9 +20,7 @@ describe('command response', function () {
     return expect(nextion.system.setSystemVariable('sys0', 0),
       'to be fulfilled with', {
         name: 'success',
-        codeByte: '0x01',
-        code: 1,
-        type: 'response'
+        code: 1
       });
   });
 

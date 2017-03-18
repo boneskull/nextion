@@ -36,9 +36,10 @@ export const isValidPort = _.allPass([
  * @private
  * @returns {boolean} Result
  */
-export const isUnsignedInteger = _.overEvery([
+export const isUnsignedInteger = _.allPass([
   _.isNumber,
   _.isFinite,
-  _.gte(0),
-  _.lte(MAX_INT)
+  _.isInteger,
+  _.gte(_, 0),
+  _.lte(_, MAX_INT)
 ]);

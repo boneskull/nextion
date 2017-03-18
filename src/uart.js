@@ -147,14 +147,12 @@ export class UART extends EventEmitter {
     if (!this.ready) {
       return Promise.reject(new Error('Device not ready!'));
     }
-    return this.ready.then(() => {
-      if (value === true) {
-        value = 1;
-      } else if (value === false) {
-        value = 0;
-      }
-      return this.request(`${variableName}=${value}`);
-    });
+    if (value === true) {
+      value = 1;
+    } else if (value === false) {
+      value = 0;
+    }
+    return this.request(`${variableName}=${value}`);
   }
 
   /**
@@ -371,7 +369,8 @@ export class UART extends EventEmitter {
   /**
    * Given a serial port name or path, or object containing one, create a
    * {@link Serialport} instance, open the serial port, then return a {@link
-   * UART} instance. If no port name is present, we'll try to autodetect the port.
+    * UART} instance. If no port name is present, we'll try to autodetect the
+    * port.
    * @param {string|NextionOptions} [portName] - Serial port name or path, or
    *   options
    * @param {NextionOptions} [opts={}] - Options

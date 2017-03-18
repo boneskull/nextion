@@ -46,7 +46,7 @@ export class System extends EventEmitter {
         }
         if (!isUnsignedInteger(value)) {
           throw new TypeError(
-            `"value" must be an unsigned integer <= ${MAX_INT}`);
+            `"value" must be an unsigned integer <= ${MAX_INT}; got ${value}`);
         }
         return this.uart.setValue(name, value);
       });

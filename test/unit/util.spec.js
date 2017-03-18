@@ -1,5 +1,4 @@
 import * as util from '../../src/util';
-import _ from 'lodash/fp';
 
 describe('utility methods', function () {
   describe('toHex()', function () {

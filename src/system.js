@@ -57,7 +57,7 @@ export class System extends EventEmitter {
    * @param {number} [min=0] - Unsigned integer; no greater than `max`
    * @param {number} [max=4294967295] - Unsigned integer; no less than `min`
    * @returns {Promise.<ResponseResult,TypeError>} Response or {@link
-   *   TypeError} if invalid `min` or `max` value
+    *   TypeError} if invalid `min` or `max` value
    */
   setRandomRange (min = 0, max = 1) {
     return Promise.resolve()
@@ -79,10 +79,12 @@ export class System extends EventEmitter {
   }
 
   /**
-   * Gets a random value, optionally setting the allowed range via {@link System#setRandomRange}.
+   * Gets a random value, optionally setting the allowed range via {@link
+    * System#setRandomRange}.
    * @param {number} [min=0] - Unsigned integer; no greater than `max`
    * @param {number} [max=0] - Unsigned integer; no less than `min`
-   * @returns {Promise<ResponseResult,TypeError>} Result or error if invalid range supplied
+   * @returns {Promise<ResponseResult,TypeError>} Result or error if invalid
+   *   range supplied
    */
   random (min = 0, max = 0) {
     return Promise.resolve(() => {
@@ -95,7 +97,8 @@ export class System extends EventEmitter {
 
   /**
    * Set sleep timer when not touched.
-   * @param {number} ms - Sleep after `ms` milliseconds of no touching. Rounded to closest second.
+   * @param {number} ms - Sleep after `ms` milliseconds of no touching. Rounded
+   *   to closest second.
    * @returns {Promise.<ResponseResult, Error>} Result
    */
   setNoTouchSleepTimer (ms = 0) {

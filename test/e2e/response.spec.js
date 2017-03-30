@@ -13,6 +13,9 @@ describe('command response', function () {
     return fromPort(process.env.NEXTION_TEST_PORT)
       .then(_nextion => {
         nextion = _nextion;
+      })
+      .catch(() => {
+        this.skip();
       });
   });
 

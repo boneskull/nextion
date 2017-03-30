@@ -7,7 +7,7 @@ import {toHex} from './util';
 /**
  * @ignore
  */
-const debug = debug_('nextion:protocol');
+const trace = debug_('trace:nextion:protocol');
 
 /**
  * @ignore
@@ -28,7 +28,6 @@ const NextionProtocolClass = createProtocol(function () {
 /**
  * A [bin-protocol](https://npmjs.com/package/bin-protocol) `Protocol` class
  * which decodes Nextion-speak.
- * Does not handle response codes!
  * @see https://npmjs.com/package/bin-protocol
  * @example
  * const protocolInstance = new NextionProtocol();
@@ -41,6 +40,18 @@ class NextionProtocol {
     return new NextionProtocolClass();
   }
 }
+
+/**
+ * Result of `stringData` response.
+ * @typedef {Object} StringData
+ * @property {string} value - String result value
+ */
+
+/**
+ * Result of `numericData` response.
+ * @typedef {Object} NumericData
+ * @property {number} value - Numeric result value
+ */
 
 /**
  * Namespace of "read" functions which are supported by {@link NextionProtocol}.
@@ -96,7 +107,6 @@ Object.keys(readers)
 
 /**
  * Generic response or event from Nextion device.
- * @public
  * @abstract
  * @example
  * const result = new Result(0x01); // success
@@ -125,7 +135,6 @@ class Result {
 
 /**
  * An "event" from a Nextion device.
- * @public
  */
 class EventResult extends Result {
   /**
@@ -152,14 +161,14 @@ class EventResult extends Result {
 
 /**
  * A response, either success or an error, from a command.
- * @public
  */
 class ResponseResult extends Result {
   /**
    * Creates a ResponseResult.
    * @param {number} code - Decimal instruction code
+   * @param {*} [data] - Any other data returned by result
    */
-  constructor (code) {
+  constructor (code, data) {
     super(code);
 
     /**
@@ -167,6 +176,12 @@ class ResponseResult extends Result {
      * @type {string}
      */
     this.name = responseCodeMap.get(String(code));
+
+    /**
+     * Any other data returned by result
+     * @type {*|void}
+     */
+    this.data = data;
   }
 }
 
@@ -179,18 +194,21 @@ class ResponseResult extends Result {
  */
 export function read (buf) {
   const code = buf.readUInt8(0);
-  debug('Code:', toHex(code));
-  if (responseCodeMap.has(String(code))) {
-    return new ResponseResult(code);
+  trace('Code:', toHex(code));
+  const codeStr = String(code);
+  let result;
+  if (responseCodeMap.has(codeStr)) {
+    result = new ResponseResult(code);
+  } else if (eventCodeMap.has(codeStr)) {
+    result = new EventResult(code);
   }
 
-  if (eventCodeMap.has(String(code))) {
-    const eventResult = new EventResult(code);
+  if (result) {
     const reader = nextionProtocol.read(buf.slice(1));
-    if (_.isFunction(reader[eventResult.name])) {
-      eventResult.data = reader[eventResult.name]().result;
+    if (_.isFunction(reader[result.name])) {
+      result.data = reader[result.name]().result;
     }
-    return eventResult;
+    return result;
   }
 
   throw new TypeError(`Unknown data received: ${buf.toString()}`);

@@ -39,12 +39,7 @@ const PORT_GUESS_REGEX = /usb|acm|^com/i;
 /**
  * @ignore
  */
-const txDebug = debug_('nextion:UART:TX');
-
-/**
- * @ignore
- */
-const rxDebug = debug_('nextion:UART:RX');
+const trace = debug_('trace:nextion:UART');
 
 /**
  * @ignore
@@ -115,11 +110,11 @@ export class UART extends EventEmitter {
       try {
         const result = read(data);
         if (result.type === 'event') {
-          rxDebug(`Event "${result.name}" (${result.codeByte}); data:`,
+          debug(`Event "${result.name}" (${result.codeByte}); data:`,
             result.data);
           this.emit('event', result);
-        } else {
-          rxDebug(`Response "${result.name}" (${result.codeByte})`);
+        } else if (this.listenerCount('response')) {
+          debug(`Response "${result.name}" (${result.codeByte})`);
           this.emit('response', result);
         }
       } catch (err) {
@@ -135,6 +130,20 @@ export class UART extends EventEmitter {
   }
 
   /**
+   * Asserts readiness of port
+   * @returns {Promise<void,Error>} Rejected if port not ready
+   * @private
+   */
+  checkPort () {
+    return new Promise((resolve, reject) => {
+      if (!this.ready) {
+        reject(new Error('Device not ready!'));
+      }
+      resolve();
+    });
+  }
+
+  /**
    * Set variable `variableName` to value `value`.
    * Boolean values `true` and `false` become `1` and `0`, respectively.
    * @param {string} variableName - Name of variable, component, system var,
@@ -144,15 +153,27 @@ export class UART extends EventEmitter {
    *   {@link Error} if device is not ready.
    */
   setValue (variableName, value) {
-    if (!this.ready) {
-      return Promise.reject(new Error('Device not ready!'));
-    }
-    if (value === true) {
-      value = 1;
-    } else if (value === false) {
-      value = 0;
-    }
-    return this.request(`${variableName}=${value}`);
+    return this.checkPort()
+      .then(() => {
+        if (value === true) {
+          value = 1;
+        } else if (value === false) {
+          value = 0;
+        }
+        return this.request(`${variableName}=${value}`);
+      });
+  }
+
+  /**
+   * Gets a value
+   * @param {string} name - Name; can be `varName.val` or `component.txt`, etc.
+   * @returns {Promise<ResponseResult<StringData|NumericData>,Error>} String or
+   *   numeric data response (depending on variable's type)
+   */
+  getValue (name) {
+    return this.checkPort()
+      .then(() => this.request(`get ${String(name)
+        .trim()}`));
   }
 
   /**
@@ -167,7 +188,7 @@ export class UART extends EventEmitter {
       if (!Buffer.isBuffer(data)) {
         return reject(new TypeError('Expected Buffer'));
       }
-      txDebug('Writing:', data);
+      trace('Writing:', data);
       this.port.write(data, err => {
         if (err) {
           return reject(err);
@@ -181,7 +202,7 @@ export class UART extends EventEmitter {
       });
     })
       .then(() => {
-        txDebug('Wrote:', data || '(empty string)');
+        trace('Wrote:', data || '(empty string)');
         return this;
       });
   }
@@ -189,17 +210,17 @@ export class UART extends EventEmitter {
   /**
    * Sends a raw command; does not wait for response.
    * @param {string} [command] - Raw ASCII command, or nothing at all
-   * @private
+   * @todo this might need a semaphore.
    * @returns {Promise<UART>} This UART instance
    */
   send (command = '') {
-    txDebug('Sending:', command);
+    trace('Sending:', command);
     return this.write(Buffer.concat([
       Buffer.from(command),
       delimiterBuffer
     ]))
       .then(() => {
-        txDebug('Sent:', command || '(empty string)');
+        trace('Sent:', command || '(empty string)');
         return this;
       });
   }
@@ -212,33 +233,33 @@ export class UART extends EventEmitter {
    *   of results, or {@link Error} if device is not ready.
    */
   request (commands = [], timeout = REQUEST_TIMEOUT) {
-    if (!this.ready) {
-      return Promise.reject(new Error('Device not ready!'));
-    }
-    commands = [].concat(commands);
-    return pMapSeries(commands, command => {
-      txDebug('Beginning request');
-      return new Promise((resolve, reject) => {
-        const handler = result => {
-          rxDebug('Received', result);
-          clearTimeout(t);
-          return resolve(result);
-        };
+    return this.checkPort()
+      .then(() => {
+        commands = [].concat(commands);
+        return pMapSeries(commands, command => {
+          debug('Beginning request');
+          return new Promise((resolve, reject) => {
+            const handler = result => {
+              debug('Received', result);
+              clearTimeout(t);
+              return resolve(result);
+            };
 
-        this.once('response', handler);
+            this.once('response', handler);
 
-        const t = setTimeout(() => {
-          this.removeListener('response', handler);
-          reject(new Error(`Timeout of ${timeout}ms exceeded`));
-        }, timeout);
+            const t = setTimeout(() => {
+              this.removeListener('response', handler);
+              reject(new Error(`Timeout of ${timeout}ms exceeded`));
+            }, timeout);
 
-        this.send(command)
-          .catch(err => {
-            this.removeListener('response', handler);
-            reject(err);
+            this.send(command)
+              .catch(err => {
+                this.removeListener('response', handler);
+                reject(err);
+              });
           });
-      });
-    })
+        });
+      })
       .then(results => commands.length === 1
         ? results.shift()
         : results);
@@ -259,7 +280,7 @@ export class UART extends EventEmitter {
     let nextDelimiterIndex = 0;
     let buf = [];
     port.on('data', data => {
-      rxDebug('Raw data:', data);
+      trace('Received raw data:', data);
       // this is torn from serialport's byte delimiter parser, considering
       // we aren't ensured a Serialport object.
       Array.from(data)
@@ -270,7 +291,7 @@ export class UART extends EventEmitter {
           }
           if (nextDelimiterIndex === delimiter.length) {
             buf = Buffer.from(buf);
-            rxDebug('Parsed data:', buf);
+            trace('Parsed', buf);
             this.emit('data', buf);
             buf = [];
             nextDelimiterIndex = 0;
@@ -369,7 +390,7 @@ export class UART extends EventEmitter {
    * Given a serial port name or path, or object containing one, create a
    * {@link Serialport} instance, open the serial port, then return a {@link
     * UART} instance. If no port name is present, we'll try to autodetect the
-    * port.
+   * port.
    * @param {string|NextionOptions} [portName] - Serial port name or path, or
    *   options
    * @param {NextionOptions} [opts={}] - Options

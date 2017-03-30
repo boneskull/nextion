@@ -95,7 +95,7 @@ export class Nextion extends EventEmitter {
    * Sets a local or global variable on the current page to a value
    * @param {string} name - Name of variable
    * @param {*} [value] - New variable value
-   * @returns {Promise<ResponseResult>} Result
+   * @returns {Promise<ResponseResult<*>,Error>} Result
    */
   setValue (name, value) {
     return this.uart.setValue(name, value);
@@ -105,10 +105,20 @@ export class Nextion extends EventEmitter {
    * Sets a the value of a local component
    * @param {string} name - Name of component
    * @param {*} [value] - New component value
-   * @returns {Promise<ResponseResult>} Result
+   * @returns {Promise<ResponseResult<*>,Error>} Result
    */
   setComponentValue (name, value) {
     return this.setVariableValue(`${name}.val`, value);
+  }
+
+  /**
+   * Get a value
+   * @param {string} name - Name; can be `varName.val` or `component.txt`, etc.
+   * @returns {Promise<ResponseResult<StringData|NumericData>,Error>} String or
+   *   numeric data response (depending on variable's type)
+   */
+  getValue (name) {
+    return this.uart.getValue(name);
   }
 
   /**

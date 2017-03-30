@@ -21,15 +21,15 @@ const codes = {
     0x1e: 'invalidParameterQuantity',
     0x1f: 'ioOperationFailure',
     0x20: 'undefinedEscapeCharacter',
-    0x23: 'variableNameTooLong'
+    0x23: 'variableNameTooLong',
+    0x70: 'stringData',
+    0x71: 'numericData'
   },
   eventCodes: {
     0x65: 'touchEvent',
     0x66: 'pageId',
     0x67: 'touchCoordinate',
     0x68: 'touchCoordinateOnWake',
-    0x70: 'stringData',
-    0x71: 'numericData',
     0x86: 'autoSleep',
     0x87: 'autoWake',
     0x88: 'startup',

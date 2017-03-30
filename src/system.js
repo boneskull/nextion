@@ -1,6 +1,7 @@
 import _ from 'lodash/fp';
 import {EventEmitter} from 'events';
 import {isUnsignedInteger, MAX_INT} from './util';
+import ease from 'eases/sine-in-out';
 
 /**
  * These are the names of the internal system variables.
@@ -119,5 +120,57 @@ export class System extends EventEmitter {
    */
   wake () {
     return this.sleep(false);
+  }
+
+  /**
+   * Set display's brightness.
+   * @param {number} [percent=100] - From 100 (full) to 0 (off)
+   * @returns {Promise.<ResponseResult, Error>} - Response result
+   */
+  brightness (percent = 100) {
+    debug(`Setting brightness to ${percent}`);
+    return this.uart.setValue('dim', 100);
+  }
+
+  /**
+   * Fades the display in.  Assuming current brightness is 0.
+   * @param {number} [steps=50] - Number of steps...
+   * @param {number} [duration=1000] - ...over this many ms...
+   * @param {number} [limit=100] - ...up to this brightness level.
+   * @returns {Promise<void,Error>} No response
+   */
+  fadeIn (steps = 25, duration = 1000, limit = 100) {
+    let commands = [];
+    const delay = Math.floor(duration / steps);
+    const step = 1 / steps;
+    const ceil = 1 / limit;
+    for (let t = step; t <= ceil; t += step) {
+      const v = Math.ceil(ease(t) * 100);
+      commands.push(`dim=${v}`, `delay=${delay}`);
+    }
+    // avoid extra delay at end
+    commands.pop();
+    return pMapSeries(commands, command => this.uart.send(command));
+  }
+
+  /**
+   * Fades the display out.  Assuming current brightness is 100.
+   * @param {number} [steps=150] - Number of steps...
+   * @param {number} [duration=3000] - ...over this many ms...
+   * @param {number} [limit=0] - ...down to this brightness level.
+   * @returns {Promise<void,Error>} No response
+   */
+  fadeOut (steps = 50, duration = 2000, limit = 0) {
+    let commands = [];
+    const delay = Math.floor(duration / steps);
+    const step = 1 / steps;
+    const floor = 1 / limit;
+    for (let t = 1; t >= floor; t -= step) {
+      const v = Math.floor(ease(t) * 100);
+      commands.push(`dim=${v}`, `delay=${delay}`);
+    }
+    // avoid extra delay at end
+    commands.pop();
+    return pMapSeries(commands, command => this.uart.send(command));
   }
 }

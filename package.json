@@ -26,6 +26,7 @@
   "dependencies": {
     "bin-protocol": "^3.0.3",
     "debug": "^2.6.3",
+    "eases": "^1.0.8",
     "lodash": "^4.17.4",
     "p-map-series": "^1.0.0",
     "pify": "^2.3.0",

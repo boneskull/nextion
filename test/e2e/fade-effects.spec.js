@@ -23,10 +23,10 @@ describe('fade effects', function () {
       });
   });
 
-  //it('should fade the screen out', function () {
-  //  return nextion.system.brightness()
-  //    .then(() => expect(nextion.system.fadeOut(), 'to be fulfilled'));
-  //});
+  it.skip('should fade the screen out', function () {
+    return nextion.system.brightness()
+      .then(() => expect(nextion.system.fadeOut(), 'to be fulfilled'));
+  });
 
   it('should fade the screen in', function () {
     return expect(nextion.system.fadeIn(), 'to be fulfilled');

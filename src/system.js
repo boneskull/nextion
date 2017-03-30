@@ -2,6 +2,9 @@ import _ from 'lodash/fp';
 import {EventEmitter} from 'events';
 import {isUnsignedInteger, MAX_INT} from './util';
 import ease from 'eases/sine-in-out';
+import debug_ from 'debug';
+import pMapSeries from 'p-map-series';
+const debug = debug_('nextion:System');
 
 /**
  * These are the names of the internal system variables.

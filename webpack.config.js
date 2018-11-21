@@ -1,13 +1,13 @@
-import nodeExternals from 'webpack-node-externals';
-import pkg from './package.json';
-import BabiliPlugin from 'babili-webpack-plugin';
-import {join} from 'path';
+const nodeExternals = require('webpack-node-externals');
+const pkg = require('./package.json');
+const BabiliPlugin = require('babili-webpack-plugin');
+const {join} = require('path');
 
-export default {
+module.exports = {
   entry: join(__dirname, 'src', 'index.js'),
   target: 'node',
   output: {
-    path: 'minimal',
+    path: join(__dirname, 'minimal'),
     filename: 'index.js',
     libraryTarget: 'commonjs2',
     library: pkg.name
@@ -28,7 +28,5 @@ export default {
       }
     ]
   },
-  plugins: [
-    new BabiliPlugin()
-  ]
+  plugins: [new BabiliPlugin()]
 };
